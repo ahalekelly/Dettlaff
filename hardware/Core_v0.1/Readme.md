@@ -5,9 +5,9 @@
 ## Auto flashing errata:
 * ESC2 needs to be bridged to ground
 * RTS was mistakenly labeled as CTS
-* Auto reboot works, but for me (FT232 on Windows) it won't auto boot into flash mode, reasons unknown
+* Auto reboot works, but for me (FT232 on Windows) it won't auto boot into flash mode, reasons unknown, probably a DTR/RTS timing issue
 ## Manual flashing instructions
-Only necessary on first flash or if wifi flashing doesn't work
+Because USB auto flash is broken, this is necessary on first flash or if wifi flashing is broken
 #### FTDI <> Dettlaff
 * GND to GND
 * TX to RX
