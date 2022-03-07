@@ -1,0 +1,3 @@
+[submodule "src/DShotRMT"]
+	path = src/DShotRMT
+	url = https://github.com/ahalekelly/DShotRMT.git
