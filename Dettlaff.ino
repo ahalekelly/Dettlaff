@@ -17,8 +17,8 @@ uint16_t debounceTime = 50; // ms
 // Advanced Configuration Variables
 const uint16_t loopTime = 1000; // microseconds
 const uint8_t revPin = 12;
-DShotRMT dshot3(GPIO_NUM_21, RMT_CHANNEL_3); // ESC3
-DShotRMT dshot4(GPIO_NUM_20, RMT_CHANNEL_4); // ESC4
+DShotRMT dshot3(GPIO_NUM_15, RMT_CHANNEL_3); // ESC3
+DShotRMT dshot4(GPIO_NUM_13, RMT_CHANNEL_4); // ESC4
 
 // End Configuration Variables
 
