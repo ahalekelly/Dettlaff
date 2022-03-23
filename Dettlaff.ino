@@ -11,7 +11,7 @@
 uint16_t revThrottle = 2047; // scale is 48 - 2047
 uint16_t idleThrottle = 100; // scale is 48 - 2047
 uint32_t idleTime = 10000; // ms
-bool revSwitchNormallyClosed = true; // should we invert rev signal?
+bool revSwitchNormallyClosed = false; // should we invert rev signal?
 uint16_t debounceTime = 50; // ms 
 
 // Advanced Configuration Variables
@@ -43,14 +43,19 @@ void loop() {
   loopStartTime = micros();
   ArduinoOTA.handle();
   revSwitch.update();
-  if (loopStartTime > 10000000) { // for first 10s, send min throttle so ESCs can boot & arm
-    if (revSwitch.pressed()) {
+  if (loopStartTime > 5000000) { // for first 5s, send min throttle so ESCs can boot & arm
+    if (revSwitch.isPressed()) {
       throttleValue = revThrottle;
-    } else if (revSwitch.pressed() < idleTime) {
+    } else if (revSwitch.currentDuration() < idleTime) {
       throttleValue = idleThrottle;
     } else {
       throttleValue = 48;
     }
+  }
+  if (revSwitch.changed()) {
+    Serial.print(revSwitch.isPressed());
+    Serial.print(" ");
+    Serial.println(throttleValue);
   }
   dshot3.send_dshot_value(throttleValue, NO_TELEMETRIC);
   dshot4.send_dshot_value(throttleValue, NO_TELEMETRIC);
