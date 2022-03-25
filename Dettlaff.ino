@@ -3,7 +3,7 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #define BOUNCE_LOCK_OUT // improves rev responsiveness at the risk of spurious signals from noise
-#include <Bounce2.h>
+#include "src/Bounce2/src/Bounce2.h"
 #include "src/DShotRMT/src/DShotRMT.h"
 #include "arduino_secrets.h"
 

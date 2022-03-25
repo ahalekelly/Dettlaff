@@ -1,3 +1,6 @@
 [submodule "src/DShotRMT"]
 	path = src/DShotRMT
 	url = https://github.com/ahalekelly/DShotRMT.git
+[submodule "src/Bounce2"]
+	path = src/Bounce2
+	url = https://github.com/thomasfredericks/Bounce2
