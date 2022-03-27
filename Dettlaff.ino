@@ -4,27 +4,36 @@
 #include <ArduinoOTA.h>
 #define BOUNCE_LOCK_OUT // improves rev responsiveness at the risk of spurious signals from noise
 #include "src/Bounce2/src/Bounce2.h"
-#include "src/DShotRMT/src/DShotRMT.h"
 #include "arduino_secrets.h"
 
 // Configuration Variables
-uint16_t revThrottle = 2047; // scale is 48 - 2047
-uint16_t idleThrottle = 100; // scale is 48 - 2047
+uint16_t revThrottle = 1999; // scale is 0 - 1999
+uint16_t idleThrottle = 50; // scale is 0 - 1999
 uint32_t idleTime = 10000; // ms
 bool revSwitchNormallyClosed = false; // should we invert rev signal?
-uint16_t debounceTime = 50; // ms 
+uint16_t debounceTime = 50; // ms
 
 // Advanced Configuration Variables
 const uint16_t loopTime = 1000; // microseconds
 const uint8_t revPin = 12;
-DShotRMT dshot3(GPIO_NUM_15, RMT_CHANNEL_3); // ESC3
-DShotRMT dshot4(GPIO_NUM_13, RMT_CHANNEL_4); // ESC4
-
+const uint8_t esc3Pin = 15;
+const uint8_t esc4Pin = 13;
+#define DSHOT DSHOT300 //comment out to fall back to servo PWM
 // End Configuration Variables
+
+#ifdef DSHOT
+  #include "src/DShotRMT/src/DShotRMT.h"
+  DShotRMT dshot3(esc3Pin, RMT_CHANNEL_3); // ESC3
+  DShotRMT dshot4(esc4Pin, RMT_CHANNEL_4); // ESC4
+#else
+  #include "src/ESP32Servo/src/ESP32Servo.h"
+  Servo servo3;
+  Servo servo4;
+#endif
 
 uint32_t loopStartTime = micros();
 uint32_t prevTime = micros();
-uint16_t throttleValue = 48;  // throttle range is 48 to 2047
+uint16_t throttleValue = 0; // scale is 0 - 1999
 Bounce2::Button revSwitch = Bounce2::Button();
 
 void setup() {
@@ -34,8 +43,17 @@ void setup() {
   revSwitch.attach(revPin, INPUT_PULLUP);
   revSwitch.interval(debounceTime);
   revSwitch.setPressedState(revSwitchNormallyClosed);
-  dshot3.begin(DSHOT300, false);  // bitrate & bidirectional
-  dshot4.begin(DSHOT300, false);
+  #ifdef DSHOT
+    dshot3.begin(DSHOT, false);  // bitrate & bidirectional
+    dshot4.begin(DSHOT, false);
+  #else
+    ESP32PWM::allocateTimer(2);
+    ESP32PWM::allocateTimer(3);
+    servo3.setPeriodHertz(200);
+    servo4.setPeriodHertz(200);
+    servo3.attach(15);
+    servo4.attach(13);
+  #endif   
 }
 
 void loop() {
@@ -49,7 +67,7 @@ void loop() {
     } else if (revSwitch.currentDuration() < idleTime) {
       throttleValue = idleThrottle;
     } else {
-      throttleValue = 48;
+      throttleValue = 0;
     }
   }
   if (revSwitch.changed()) {
@@ -57,8 +75,13 @@ void loop() {
     Serial.print(" ");
     Serial.println(throttleValue);
   }
-  dshot3.send_dshot_value(throttleValue, NO_TELEMETRIC);
-  dshot4.send_dshot_value(throttleValue, NO_TELEMETRIC);
+  #ifdef DSHOT
+    dshot3.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
+    dshot4.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
+  #else
+    servo3.writeMicroseconds(throttleValue/2 + 1000);
+    servo4.writeMicroseconds(throttleValue/2 + 1000);
+  #endif
 //  Serial.println(loopStartTime - prevTime);
   delayMicroseconds(max((long)(0), (long)(loopTime-(micros()-loopStartTime))));
 }
