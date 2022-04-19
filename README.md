@@ -13,3 +13,4 @@ https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32
 3. Go to Tools -> Boards -> Board Manager and install ESP32
 4. Select ESP32 Dev Module
 5. Click [here](https://github.com/ahalekelly/Dettlaff/releases/download/nightly/Dettlaff-nightly.zip) or use `git clone` or Github Desktop to download this repository. **Github's Download Zip button does not include the required libraries!**
+6. Go to the page for your hardware version for flashing instructions
