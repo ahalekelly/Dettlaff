@@ -1,4 +1,4 @@
-#include <WiFi.h>
+//#include <WiFi.h>
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
@@ -15,18 +15,29 @@ uint16_t debounceTime = 50; // ms
 
 // Advanced Configuration Variables
 const uint16_t loopTime = 1000; // microseconds
-const uint8_t revPin = 12;
-const uint8_t esc3Pin = 15;
-const uint8_t esc4Pin = 13;
+const uint8_t revPin = 12; // Rev trigger
+const uint8_t esc1Pin = 19; // Dettlaff Core v0.2
+const uint8_t esc2Pin = 18; // Dettlaff Core v0.2
+const uint8_t esc3Pin = 5; // Dettlaff Core v0.2
+const uint8_t esc4Pin = 17; // Dettlaff Core v0.2
+//const uint8_t esc1Pin = 4; // Dettlaff Core v0.1 - must comment out everything that uses ESC2!
+//const uint8_t esc3Pin = 15; // Dettlaff Core v0.1
+//const uint8_t esc4Pin = 13; // Dettlaff Core v0.1
+//const uint8_t esc3Pin = 22; // Nodemcu dev board
+//const uint8_t esc4Pin = 18; // Nodemcu dev board
 #define DSHOT DSHOT300 //comment out to fall back to servo PWM
 // End Configuration Variables
 
 #ifdef DSHOT
   #include "src/DShotRMT/src/DShotRMT.h"
-  DShotRMT dshot3(esc3Pin, RMT_CHANNEL_3); // ESC3
-  DShotRMT dshot4(esc4Pin, RMT_CHANNEL_4); // ESC4
+  DShotRMT dshot1(esc1Pin, RMT_CHANNEL_1);
+  DShotRMT dshot2(esc2Pin, RMT_CHANNEL_2);
+  DShotRMT dshot3(esc3Pin, RMT_CHANNEL_3);
+  DShotRMT dshot4(esc4Pin, RMT_CHANNEL_4);
 #else
   #include "src/ESP32Servo/src/ESP32Servo.h"
+  Servo servo1;
+  Servo servo2;
   Servo servo3;
   Servo servo4;
 #endif
@@ -44,16 +55,24 @@ void setup() {
   revSwitch.interval(debounceTime);
   revSwitch.setPressedState(revSwitchNormallyClosed);
   #ifdef DSHOT
-    dshot3.begin(DSHOT, false);  // bitrate & bidirectional
+    dshot1.begin(DSHOT, false);  // bitrate & bidirectional
+    dshot2.begin(DSHOT, false);
+    dshot3.begin(DSHOT, false);
     dshot4.begin(DSHOT, false);
   #else
+    ESP32PWM::allocateTimer(0);
+    ESP32PWM::allocateTimer(1);
     ESP32PWM::allocateTimer(2);
     ESP32PWM::allocateTimer(3);
+    servo1.setPeriodHertz(200);
+    servo2.setPeriodHertz(200);
     servo3.setPeriodHertz(200);
     servo4.setPeriodHertz(200);
-    servo3.attach(15);
-    servo4.attach(13);
-  #endif   
+    servo1.attach(esc1Pin);
+    servo2.attach(esc2Pin);
+    servo3.attach(esc3Pin);
+    servo4.attach(esc4Pin);
+  #endif
 }
 
 void loop() {
@@ -76,9 +95,13 @@ void loop() {
     Serial.println(throttleValue);
   }
   #ifdef DSHOT
+    dshot1.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
+    dshot2.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
     dshot3.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
     dshot4.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
   #else
+    servo1.writeMicroseconds(throttleValue/2 + 1000);
+    servo2.writeMicroseconds(throttleValue/2 + 1000);
     servo3.writeMicroseconds(throttleValue/2 + 1000);
     servo4.writeMicroseconds(throttleValue/2 + 1000);
   #endif
