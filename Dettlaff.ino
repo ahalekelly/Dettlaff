@@ -5,6 +5,8 @@
 #define BOUNCE_LOCK_OUT // improves rev responsiveness at the risk of spurious signals from noise
 #include "src/Bounce2/src/Bounce2.h"
 #include "arduino_secrets.h"
+#include "src/DShotRMT/src/DShotRMT.h"
+#include "src/ESP32Servo/src/ESP32Servo.h"
 
 // Configuration Variables
 uint16_t revThrottle = 1999; // scale is 0 - 1999
@@ -14,52 +16,82 @@ bool revSwitchNormallyClosed = false; // should we invert rev signal?
 uint16_t debounceTime = 50; // ms
 
 // Advanced Configuration Variables
-const uint16_t loopTime = 1000; // microseconds
-const uint8_t revPin = 12; // Rev trigger
-const uint8_t esc1Pin = 19; // Dettlaff Core v0.2
-const uint8_t esc2Pin = 18; // Dettlaff Core v0.2
-const uint8_t esc3Pin = 5; // Dettlaff Core v0.2
-const uint8_t esc4Pin = 17; // Dettlaff Core v0.2
-//const uint8_t esc1Pin = 4; // Dettlaff Core v0.1 - must comment out everything that uses ESC2!
-//const uint8_t esc3Pin = 15; // Dettlaff Core v0.1
-//const uint8_t esc4Pin = 13; // Dettlaff Core v0.1
-//const uint8_t esc3Pin = 22; // Nodemcu dev board
-//const uint8_t esc4Pin = 18; // Nodemcu dev board
-#define DSHOT DSHOT300 //comment out to fall back to servo PWM
-// End Configuration Variables
+typedef struct {
+  int8_t revSwitch;
+  int8_t triggerSwitch;
+  int8_t flywheel;
+  int8_t pusher;
+  int8_t pusherBrake;
+  int8_t esc1;
+  int8_t esc2;
+  int8_t esc3;
+  int8_t esc4;
+  int8_t telem;
+  int8_t button;
+} Pins_t;
 
-#ifdef DSHOT
-  #include "src/DShotRMT/src/DShotRMT.h"
-  DShotRMT dshot1(esc1Pin, RMT_CHANNEL_1);
-  DShotRMT dshot2(esc2Pin, RMT_CHANNEL_2);
-  DShotRMT dshot3(esc3Pin, RMT_CHANNEL_3);
-  DShotRMT dshot4(esc4Pin, RMT_CHANNEL_4);
-#else
-  #include "src/ESP32Servo/src/ESP32Servo.h"
-  Servo servo1;
-  Servo servo2;
-  Servo servo3;
-  Servo servo4;
-#endif
+const Pins_t pins_v0_3 = {
+  .revSwitch = 15,
+  .triggerSwitch = 32,
+  .flywheel = 2,
+  .pusher = 12,
+  .pusherBrake = 13,
+  .esc1 = 19,
+  .esc2 = 18,
+  .esc3 = 5,
+  .esc4 = 17,
+  .telem = 16,
+  .button = 0,
+};
+
+const Pins_t pins_v0_2 = {
+  .revSwitch = 12,
+  .triggerSwitch = 32,
+  .esc1 = 19,
+  .esc2 = 18,
+  .esc3 = 5,
+  .esc4 = 17,
+  .telem = 16,
+  .button = 0,
+};
+
+const Pins_t pins_v0_1 = {
+  .revSwitch = 12,
+  .esc1 = 4,
+  .esc2 = 2,
+  .esc3 = 15,
+  .esc4 = 13,
+};
+
+Pins_t pins = pins_v0_3;
+dshot_mode_t dshotMode =  DSHOT300; // DSHOT_OFF to fall back to servo PWM
+uint16_t loopTime = 1000; // microseconds
+// End Configuration Variables
 
 uint32_t loopStartTime = micros();
 uint32_t prevTime = micros();
 uint16_t throttleValue = 0; // scale is 0 - 1999
+
 Bounce2::Button revSwitch = Bounce2::Button();
+
+Servo servo1;
+Servo servo2;
+Servo servo3;
+Servo servo4;
+
+DShotRMT dshot1(pins.esc1, RMT_CHANNEL_1);
+DShotRMT dshot2(pins.esc2, RMT_CHANNEL_2);
+DShotRMT dshot3(pins.esc3, RMT_CHANNEL_3);
+DShotRMT dshot4(pins.esc4, RMT_CHANNEL_4);
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting");
   WiFiInit();
-  revSwitch.attach(revPin, INPUT_PULLUP);
+  revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
   revSwitch.interval(debounceTime);
   revSwitch.setPressedState(revSwitchNormallyClosed);
-  #ifdef DSHOT
-    dshot1.begin(DSHOT, false);  // bitrate & bidirectional
-    dshot2.begin(DSHOT, false);
-    dshot3.begin(DSHOT, false);
-    dshot4.begin(DSHOT, false);
-  #else
+  if (dshotMode == DSHOT_OFF) {
     ESP32PWM::allocateTimer(0);
     ESP32PWM::allocateTimer(1);
     ESP32PWM::allocateTimer(2);
@@ -68,11 +100,16 @@ void setup() {
     servo2.setPeriodHertz(200);
     servo3.setPeriodHertz(200);
     servo4.setPeriodHertz(200);
-    servo1.attach(esc1Pin);
-    servo2.attach(esc2Pin);
-    servo3.attach(esc3Pin);
-    servo4.attach(esc4Pin);
-  #endif
+    servo1.attach(pins.esc1);
+    servo2.attach(pins.esc2);
+    servo3.attach(pins.esc3);
+    servo4.attach(pins.esc4);
+  } else {
+    dshot1.begin(dshotMode, false);  // bitrate & bidirectional
+    dshot2.begin(dshotMode, false);
+    dshot3.begin(dshotMode, false);
+    dshot4.begin(dshotMode, false);
+  }
 }
 
 void loop() {
@@ -94,17 +131,17 @@ void loop() {
     Serial.print(" ");
     Serial.println(throttleValue);
   }
-  #ifdef DSHOT
-    dshot1.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
-    dshot2.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
-    dshot3.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
-    dshot4.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
-  #else
+  if (dshotMode == DSHOT_OFF) {
     servo1.writeMicroseconds(throttleValue/2 + 1000);
     servo2.writeMicroseconds(throttleValue/2 + 1000);
     servo3.writeMicroseconds(throttleValue/2 + 1000);
     servo4.writeMicroseconds(throttleValue/2 + 1000);
-  #endif
+  } else {
+    dshot1.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
+    dshot2.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
+    dshot3.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
+    dshot4.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
+  }
 //  Serial.println(loopStartTime - prevTime);
   delayMicroseconds(max((long)(0), (long)(loopTime-(micros()-loopStartTime))));
 }
