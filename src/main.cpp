@@ -1,11 +1,12 @@
+#include <Arduino.h>
 //#include <WiFi.h>
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #define BOUNCE_LOCK_OUT // improves rev responsiveness at the risk of spurious signals from noise
-#include "src/Bounce2/src/Bounce2.h"
-#include "src/DShotRMT/src/DShotRMT.h"
-#include "src/ESP32Servo/src/ESP32Servo.h"
+#include "Bounce2.h"
+#include "DShotRMT.h"
+#include "ESP32Servo.h"
 
 // Configuration Variables
 uint16_t revThrottle = 1999; // scale is 0 - 1999
@@ -94,6 +95,8 @@ DShotRMT dshot2(pins.esc2, RMT_CHANNEL_2);
 DShotRMT dshot3(pins.esc3, RMT_CHANNEL_3);
 DShotRMT dshot4(pins.esc4, RMT_CHANNEL_4);
 
+void WiFiInit();
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting");
@@ -105,6 +108,10 @@ void setup() {
     triggerSwitch.attach(pins.triggerSwitch, INPUT_PULLUP);
     triggerSwitch.interval(debounceTime);
     triggerSwitch.setPressedState(triggerSwitchNormallyClosed);
+  }
+  if (pins.pusher) {
+    pinMode(pins.pusher, OUTPUT);
+    pinMode(pins.pusherBrake, OUTPUT);
   }
   if (pins.cycleSwitch) {
     cycleSwitch.attach(pins.triggerSwitch, INPUT_PULLUP);
@@ -143,6 +150,13 @@ void loop() {
     }
     if (pins.triggerSwitch) {
       triggerSwitch.update();
+      if (triggerSwitch.isPressed()) {
+        digitalWrite(pins.pusher, HIGH);
+        digitalWrite(pins.pusherBrake, LOW);
+      } else {
+        digitalWrite(pins.pusher, HIGH);
+        digitalWrite(pins.pusherBrake, HIGH);
+      }
     }
     if (revSwitch.isPressed()) {
       throttleValue = revThrottle;

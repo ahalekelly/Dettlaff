@@ -1,9 +1,9 @@
-[submodule "src/DShotRMT"]
-	path = src/DShotRMT
+[submodule "lib/DShotRMT"]
+	path = lib/DShotRMT
 	url = https://github.com/ahalekelly/DShotRMT.git
-[submodule "src/Bounce2"]
-	path = src/Bounce2
+[submodule "lib/Bounce2"]
+	path = lib/Bounce2
 	url = https://github.com/thomasfredericks/Bounce2
-[submodule "src/ESP32Servo"]
-	path = src/ESP32Servo
+[submodule "lib/ESP32Servo"]
+	path = lib/ESP32Servo
 	url = https://github.com/ahalekelly/ESP32Servo.git
