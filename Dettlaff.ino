@@ -13,12 +13,15 @@ uint16_t revThrottle = 1999; // scale is 0 - 1999
 uint16_t idleThrottle = 50; // scale is 0 - 1999
 uint32_t idleTime = 10000; // ms
 bool revSwitchNormallyClosed = false; // should we invert rev signal?
+bool triggerSwitchNormallyClosed = false;
+bool cycleSwitchNormallyClosed = false;
 uint16_t debounceTime = 50; // ms
 
 // Advanced Configuration Variables
 typedef struct {
   int8_t revSwitch;
   int8_t triggerSwitch;
+  int8_t cycleSwitch;
   int8_t flywheel;
   int8_t pusher;
   int8_t pusherBrake;
@@ -33,6 +36,7 @@ typedef struct {
 const Pins_t pins_v0_3 = {
   .revSwitch = 15,
   .triggerSwitch = 32,
+  .cycleSwitch = 34,
   .flywheel = 2,
   .pusher = 12,
   .pusherBrake = 13,
@@ -45,8 +49,7 @@ const Pins_t pins_v0_3 = {
 };
 
 const Pins_t pins_v0_2 = {
-  .revSwitch = 12,
-  .triggerSwitch = 32,
+  .revSwitch = 15,
   .esc1 = 19,
   .esc2 = 18,
   .esc3 = 5,
@@ -73,6 +76,9 @@ uint32_t prevTime = micros();
 uint16_t throttleValue = 0; // scale is 0 - 1999
 
 Bounce2::Button revSwitch = Bounce2::Button();
+Bounce2::Button triggerSwitch = Bounce2::Button();
+Bounce2::Button cycleSwitch = Bounce2::Button();
+Bounce2::Button button = Bounce2::Button();
 
 Servo servo1;
 Servo servo2;
@@ -91,6 +97,16 @@ void setup() {
   revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
   revSwitch.interval(debounceTime);
   revSwitch.setPressedState(revSwitchNormallyClosed);
+  if (pins.triggerSwitch) {
+    triggerSwitch.attach(pins.triggerSwitch, INPUT_PULLUP);
+    triggerSwitch.interval(debounceTime);
+    triggerSwitch.setPressedState(triggerSwitchNormallyClosed);
+  }
+  if (pins.cycleSwitch) {
+    cycleSwitch.attach(pins.triggerSwitch, INPUT_PULLUP);
+    cycleSwitch.interval(debounceTime);
+    cycleSwitch.setPressedState(cycleSwitchNormallyClosed);
+  }
   if (dshotMode == DSHOT_OFF) {
     ESP32PWM::allocateTimer(0);
     ESP32PWM::allocateTimer(1);
@@ -118,6 +134,12 @@ void loop() {
   ArduinoOTA.handle();
   revSwitch.update();
   if (loopStartTime > 5000000) { // for first 5s, send min throttle so ESCs can boot & arm
+    if (pins.cycleSwitch) {
+      cycleSwitch.update();
+    }
+    if (pins.triggerSwitch) {
+      triggerSwitch.update();
+    }
     if (revSwitch.isPressed()) {
       throttleValue = revThrottle;
     } else if (revSwitch.currentDuration() < idleTime) {
@@ -126,11 +148,14 @@ void loop() {
       throttleValue = 0;
     }
   }
-  if (revSwitch.changed()) {
+
+  if (revSwitch.changed()) { // debug
     Serial.print(revSwitch.isPressed());
     Serial.print(" ");
     Serial.println(throttleValue);
   }
+
+  // send signal to ESCs
   if (dshotMode == DSHOT_OFF) {
     servo1.writeMicroseconds(throttleValue/2 + 1000);
     servo2.writeMicroseconds(throttleValue/2 + 1000);
