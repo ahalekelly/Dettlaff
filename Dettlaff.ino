@@ -4,7 +4,6 @@
 #include <ArduinoOTA.h>
 #define BOUNCE_LOCK_OUT // improves rev responsiveness at the risk of spurious signals from noise
 #include "src/Bounce2/src/Bounce2.h"
-#include "arduino_secrets.h"
 #include "src/DShotRMT/src/DShotRMT.h"
 #include "src/ESP32Servo/src/ESP32Servo.h"
 
@@ -16,8 +15,13 @@ bool revSwitchNormallyClosed = false; // should we invert rev signal?
 bool triggerSwitchNormallyClosed = false;
 bool cycleSwitchNormallyClosed = false;
 uint16_t debounceTime = 50; // ms
+char wifiSsid[32] = "ssid";
+char wifiPass[63] = "pass";
 
 // Advanced Configuration Variables
+const char* AP_SSID = "Dettlaff";
+const char* AP_PW = "KellyIndu";
+
 typedef struct {
   int8_t revSwitch;
   int8_t triggerSwitch;
@@ -173,12 +177,14 @@ void loop() {
 
 void WiFiInit() {
   WiFi.mode(WIFI_STA);
-  WiFi.begin(SSID, PASS);
+  WiFi.begin(wifiSsid, wifiPass);
   if (WiFi.waitForConnectResult() != WL_CONNECTED) {
     Serial.println("WiFi Connection Failed!");
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(AP_SSID, AP_PW);
   } else {
     Serial.print("WiFi Connected ");
-    Serial.println(SSID);
+    Serial.println(wifiSsid);
     ArduinoOTA.setHostname("Dettlaff");
   
     // No authentication by default
