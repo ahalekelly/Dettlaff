@@ -11,7 +11,7 @@
 // Configuration Variables
 uint16_t revThrottle = 1999; // scale is 0 - 1999
 uint16_t idleThrottle = 50; // scale is 0 - 1999
-uint32_t idleTime = 10000; // ms
+uint32_t idleTime = 4000; // ms
 bool revSwitchNormallyClosed = false; // should we invert rev signal?
 bool triggerSwitchNormallyClosed = false;
 bool cycleSwitchNormallyClosed = false;
@@ -20,8 +20,8 @@ char wifiSsid[32] = "ssid";
 char wifiPass[63] = "pass";
 
 // Advanced Configuration Variables
-const char* AP_SSID = "Dettlaff";
-const char* AP_PW = "KellyIndu";
+char AP_SSID[32] = "Dettlaff";
+char AP_PW[32] = "KellyIndu";
 
 typedef struct {
   int8_t revSwitch;
@@ -41,7 +41,7 @@ typedef struct {
 const Pins_t pins_v0_3 = {
   .revSwitch = 15,
   .triggerSwitch = 32,
-  .cycleSwitch = 34,
+  .cycleSwitch = 23,
   .flywheel = 2,
   .pusher = 12,
   .pusherBrake = 13,
@@ -100,23 +100,29 @@ void WiFiInit();
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting");
+  if (pins.flywheel) {
+    pinMode(pins.flywheel, OUTPUT);
+    digitalWrite(pins.flywheel, HIGH);
+  }
   WiFiInit();
-  revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
-  revSwitch.interval(debounceTime);
-  revSwitch.setPressedState(revSwitchNormallyClosed);
+  if (pins.revSwitch) {
+    revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
+    revSwitch.interval(debounceTime);
+    revSwitch.setPressedState(revSwitchNormallyClosed);
+  }
   if (pins.triggerSwitch) {
     triggerSwitch.attach(pins.triggerSwitch, INPUT_PULLUP);
     triggerSwitch.interval(debounceTime);
     triggerSwitch.setPressedState(triggerSwitchNormallyClosed);
   }
+  if (pins.cycleSwitch) {
+    cycleSwitch.attach(pins.cycleSwitch, INPUT_PULLUP);
+    cycleSwitch.interval(debounceTime);
+    cycleSwitch.setPressedState(cycleSwitchNormallyClosed);
+  }
   if (pins.pusher) {
     pinMode(pins.pusher, OUTPUT);
     pinMode(pins.pusherBrake, OUTPUT);
-  }
-  if (pins.cycleSwitch) {
-    cycleSwitch.attach(pins.triggerSwitch, INPUT_PULLUP);
-    cycleSwitch.interval(debounceTime);
-    cycleSwitch.setPressedState(cycleSwitchNormallyClosed);
   }
   if (dshotMode == DSHOT_OFF) {
     ESP32PWM::allocateTimer(0);
@@ -142,14 +148,17 @@ void setup() {
 void loop() {
   prevTime = loopStartTime;
   loopStartTime = micros();
-  ArduinoOTA.handle();
-  revSwitch.update();
+  if (pins.revSwitch) {
+    revSwitch.update();
+  }
+  if (pins.cycleSwitch) {
+    cycleSwitch.update();
+  }
+  if (pins.triggerSwitch) {
+    triggerSwitch.update();
+  }
   if (loopStartTime > 5000000) { // for first 5s, send min throttle so ESCs can boot & arm
-    if (pins.cycleSwitch) {
-      cycleSwitch.update();
-    }
     if (pins.triggerSwitch) {
-      triggerSwitch.update();
       if (triggerSwitch.isPressed()) {
         digitalWrite(pins.pusher, HIGH);
         digitalWrite(pins.pusherBrake, LOW);
@@ -167,12 +176,6 @@ void loop() {
     }
   }
 
-  if (revSwitch.changed()) { // debug
-    Serial.print(revSwitch.isPressed());
-    Serial.print(" ");
-    Serial.println(throttleValue);
-  }
-
   // send signal to ESCs
   if (dshotMode == DSHOT_OFF) {
     servo1.writeMicroseconds(throttleValue/2 + 1000);
@@ -186,6 +189,7 @@ void loop() {
     dshot4.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
   }
 //  Serial.println(loopStartTime - prevTime);
+  ArduinoOTA.handle();
   delayMicroseconds(max((long)(0), (long)(loopTime-(micros()-loopStartTime))));
 }
 
