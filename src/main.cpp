@@ -1,7 +1,4 @@
 #include <Arduino.h>
-//#include <WiFi.h>
-#include <ESPmDNS.h>
-#include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #define BOUNCE_LOCK_OUT // improves rev responsiveness at the risk of spurious signals from noise
 #include "Bounce2.h"
