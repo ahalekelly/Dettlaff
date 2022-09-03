@@ -11,10 +11,16 @@ char wifiPass[63] = "pass";
 uint32_t revRPM = 50000;
 uint32_t idleRPM = 1000;
 uint32_t idleTime_ms = 5000;
-uint32_t scaledMotorKv = 2550 * 11; // motor kv * battery voltage divider ratio
-uint8_t burstLength = 3;
-bool closedLoopControl = false;
+uint32_t scaledMotorKv = 2550 * 11; // motor kv * battery voltage resistor divider ratio
+uint16_t burstLength = 3;
+uint8_t bufferMode = 0;
+// 0 = stop firing when trigger is released
+// 1 = complete current burst
+// 2 = fire as many bursts as trigger pulls
+// for full auto, set burstlength high (100) and bufferMode = 0
+bool closedLoopFlywheels = false;
 uint16_t firingDelay_ms = 200;
+uint16_t pusherStallTime_ms = 200;
 uint16_t spindownSpeed = 1;
 bool revSwitchNormallyClosed = false; // should we invert rev signal?
 bool triggerSwitchNormallyClosed = false;
@@ -41,9 +47,10 @@ typedef struct {
   int8_t telem;
   int8_t button;
   int8_t batteryADC;
-} Pins_t;
+} pins_t;
 
-const Pins_t pins_v0_3_n20 = {
+
+const pins_t pins_v0_3_n20 = {
   .revSwitch = 15,
   .triggerSwitch = 32,
   .cycleSwitch = 23,
@@ -59,7 +66,7 @@ const Pins_t pins_v0_3_n20 = {
   .batteryADC = 33,
 };
 
-const Pins_t pins_v0_3_noid = {
+const pins_t pins_v0_3_noid = {
   .revSwitch = 15,
   .triggerSwitch = 32,
   .pusher = 2,
@@ -72,7 +79,7 @@ const Pins_t pins_v0_3_noid = {
   .batteryADC = 33,
 };
 
-const Pins_t pins_v0_2 = {
+const pins_t pins_v0_2 = {
   .revSwitch = 15,
   .esc1 = 19,
   .esc2 = 18,
@@ -83,7 +90,7 @@ const Pins_t pins_v0_2 = {
   .batteryADC = 12,
 };
 
-const Pins_t pins_v0_1 = {
+const pins_t pins_v0_1 = {
   .revSwitch = 12,
   .esc1 = 4,
   .esc2 = 2,
@@ -91,30 +98,35 @@ const Pins_t pins_v0_1 = {
   .esc4 = 13,
 };
 
-Pins_t pins = pins_v0_3_n20;
+pins_t pins = pins_v0_3_n20;
+
+enum pusherType_t {
+  NO_PUSHER,
+  PUSHER_MOTOR_CLOSEDLOOP,
+  PUSHER_SOLENOID_OPENLOOP
+};
+pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP;
+
 // End Configuration Variables
 
-// state machine diagram https://drive.google.com/file/d/1OglAILRt0AgflKg7DCO_BhukITWqTDnz/view?usp=sharing
-enum state_t { // flywheel state, then pusher state
+enum flywheelState_t {
   STATE_IDLE,
-  STATE_ACCELERATING_STANDBY,
-  STATE_ACCELERATING_WAITING, // ACCELERATING = wheels not yet at full speed
-  STATE_REV_STANDBY, // REV = wheels at full speed
-  STATE_REV_FIRING,
-  STATE_REV_RESET, // RESET = trigger is held down in semi or burst mode and cycle has completed
-  STATE_IDLE_RESET
+  STATE_ACCELERATING, // ACCELERATING = wheels not yet at full speed
+  STATE_FULLSPEED, // REV = wheels at full speed
 };
 
-state_t state = STATE_IDLE;
 
 uint32_t loopStartTimer_us = micros();
 uint16_t loopTime_us = targetLoopTime_us;
 uint32_t time_ms = millis();
 int32_t lastRevTime_ms = -100000; // for calculating idling
+uint32_t pusherTimer_ms;
 uint32_t targetRPM = 0;
 uint32_t throttleValue = 0; // scale is 0 - 1999
 uint16_t batteryADC_mv = 0; // voltage at the ADC, after the voltage divider
-uint8_t shotsToFire = 0;
+uint16_t shotsToFire = 0;
+flywheelState_t flywheelState = STATE_IDLE;
+bool firing = false;
 
 const uint32_t maxThrottle = 1999;
 
@@ -189,75 +201,79 @@ void loop() {
   if (pins.revSwitch) {
     revSwitch.update();
   }
-  if (pins.cycleSwitch) {
-    cycleSwitch.update();
-  }
   if (pins.triggerSwitch) {
     triggerSwitch.update();
   }
 
-  switch (state){
+  if (triggerSwitch.pressed()) {
+    if (bufferMode == 0) {
+      shotsToFire = burstLength;
+    } else if (bufferMode == 1) {
+      if (shotsToFire < burstLength) {
+        shotsToFire += burstLength;
+      }
+    } else if (bufferMode == 2) {
+      shotsToFire += burstLength;
+    }
+  } else if (triggerSwitch.released()) {
+    if (bufferMode == 0) {
+      shotsToFire = 0;
+    }
+  }
+
+  switch (flywheelState){
     case STATE_IDLE:
-      if (triggerSwitch.isPressed()) {
+      if (triggerSwitch.isPressed() || revSwitch.isPressed()) {
         targetRPM = revRPM;
         lastRevTime_ms = time_ms;
-        state = STATE_ACCELERATING_WAITING;
-      } else if (revSwitch.isPressed()) {
-        targetRPM = revRPM;
-        lastRevTime_ms = time_ms;
-        state = STATE_ACCELERATING_STANDBY;
+        flywheelState = STATE_ACCELERATING;
       } else if (time_ms < lastRevTime_ms+idleTime_ms) { // idle flywheels
         targetRPM = idleRPM;
       } else { // stop flywheels
         targetRPM = 0;
       }
       break;
-    case STATE_ACCELERATING_STANDBY:
-      if (!closedLoopControl && time_ms > lastRevTime_ms + firingDelay_ms) {
-        state = STATE_REV_STANDBY;
-        if (triggerSwitch.isPressed()) {
-          state =  STATE_REV_FIRING;
+    case STATE_ACCELERATING:
+      if ((closedLoopFlywheels)
+      || (!closedLoopFlywheels && time_ms > lastRevTime_ms + firingDelay_ms)) {
+        flywheelState = STATE_FULLSPEED;
+      }
+      break;
+    case STATE_FULLSPEED:
+      if (!revSwitch.isPressed() && shotsToFire == 0 && !firing) {
+        flywheelState = STATE_IDLE;
+      } else if (shotsToFire > 0 || firing) {
+        switch (pusherType) {
+          case PUSHER_MOTOR_CLOSEDLOOP:
+            cycleSwitch.update();
+            if (shotsToFire > 0 && !firing) { // start pusher stroke
+              digitalWrite(pins.pusher, HIGH);
+              digitalWrite(pins.pusherBrake, LOW);
+              firing = true;
+              pusherTimer_ms = time_ms;
+            } else if (firing && shotsToFire == 0 && cycleSwitch.pressed()) { // brake pusher
+              digitalWrite(pins.pusher, HIGH);
+              digitalWrite(pins.pusherBrake, HIGH);
+              firing = false;
+            } else if (firing && cycleSwitch.released()) {
+              shotsToFire = max(0, shotsToFire-1);
+              pusherTimer_ms = time_ms;
+            } else if (firing && time_ms > pusherTimer_ms + pusherStallTime_ms) { // stall protection
+              digitalWrite(pins.pusher, LOW); // let pusher coast
+              digitalWrite(pins.pusherBrake, LOW);
+              shotsToFire = 0;
+              firing = false;
+              Serial.println("Pusher motor stalled!");
+            }
+            break;
+          case PUSHER_SOLENOID_OPENLOOP:
+            break;
         }
-      } else if (triggerSwitch.isPressed()) {
-        state = STATE_ACCELERATING_WAITING;
       }
-      break;
-    case STATE_ACCELERATING_WAITING:
-      if (!closedLoopControl && time_ms > lastRevTime_ms + firingDelay_ms) {
-        state = STATE_REV_FIRING;
-      }
-      break;
-    case STATE_REV_STANDBY:
-      if (triggerSwitch.isPressed()) {
-        state = STATE_REV_FIRING;
-      } else if (!revSwitch.isPressed()) {
-        state = STATE_IDLE;
-      }
-      break;
-    case STATE_REV_FIRING:
-      if (!triggerSwitch.isPressed() && cycleSwitch.isPressed()) {
-        if (revSwitch.isPressed()) {
-          state = STATE_REV_STANDBY;
-        } else {
-          state = STATE_IDLE;
-        }
-      }
-      break;
-    case STATE_REV_RESET:
-      break;
-    case STATE_IDLE_RESET:
       break;
   }
 
-  if (state == STATE_REV_FIRING) {
-    digitalWrite(pins.pusher, HIGH);
-    digitalWrite(pins.pusherBrake, LOW);
-  } else {
-    digitalWrite(pins.pusher, HIGH);
-    digitalWrite(pins.pusherBrake, HIGH);
-  }
-
-  if (closedLoopControl) {
+  if (closedLoopFlywheels) {
     // ray control code goes here
   } else {
     throttleValue = max(maxThrottle * targetRPM / batteryADC_mv * 1000 / scaledMotorKv,
