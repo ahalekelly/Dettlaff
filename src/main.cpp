@@ -4,6 +4,7 @@
 #include "Bounce2.h"
 #include "DShotRMT.h"
 #include "ESP32Servo.h"
+#include "types.h"
 
 // Configuration Variables
 char wifiSsid[32] = "ssid";
@@ -20,6 +21,7 @@ uint8_t bufferMode = 0;
 // for full auto, set burstlength high (100) and bufferMode = 0
 bool closedLoopFlywheels = false;
 uint16_t firingDelay_ms = 200;
+pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP;
 uint16_t pusherStallTime_ms = 200;
 uint16_t spindownSpeed = 1;
 bool revSwitchNormallyClosed = false; // should we invert rev signal?
@@ -32,23 +34,6 @@ char AP_SSID[32] = "Dettlaff";
 char AP_PW[32] = "KellyIndu";
 dshot_mode_t dshotMode =  DSHOT300; // DSHOT_OFF to fall back to servo PWM
 uint16_t targetLoopTime_us = 1000; // microseconds
-
-typedef struct {
-  int8_t revSwitch;
-  int8_t triggerSwitch;
-  int8_t cycleSwitch;
-  int8_t flywheel;
-  int8_t pusher;
-  int8_t pusherBrake;
-  int8_t esc1;
-  int8_t esc2;
-  int8_t esc3;
-  int8_t esc4;
-  int8_t telem;
-  int8_t button;
-  int8_t batteryADC;
-} pins_t;
-
 
 const pins_t pins_v0_3_n20 = {
   .revSwitch = 15,
@@ -100,21 +85,7 @@ const pins_t pins_v0_1 = {
 
 pins_t pins = pins_v0_3_n20;
 
-enum pusherType_t {
-  NO_PUSHER,
-  PUSHER_MOTOR_CLOSEDLOOP,
-  PUSHER_SOLENOID_OPENLOOP
-};
-pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP;
-
 // End Configuration Variables
-
-enum flywheelState_t {
-  STATE_IDLE,
-  STATE_ACCELERATING, // ACCELERATING = wheels not yet at full speed
-  STATE_FULLSPEED, // REV = wheels at full speed
-};
-
 
 uint32_t loopStartTimer_us = micros();
 uint16_t loopTime_us = targetLoopTime_us;
