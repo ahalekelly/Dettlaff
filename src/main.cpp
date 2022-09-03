@@ -23,6 +23,8 @@ bool closedLoopFlywheels = false;
 uint16_t firingDelay_ms = 200;
 pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP;
 uint16_t pusherStallTime_ms = 200;
+uint16_t solenoidExtendTime_ms = 100;
+uint16_t solenoidRetractTime_ms = 100;
 uint16_t spindownSpeed = 1;
 bool revSwitchNormallyClosed = false; // should we invert rev signal?
 bool triggerSwitchNormallyClosed = false;
@@ -91,7 +93,7 @@ uint32_t loopStartTimer_us = micros();
 uint16_t loopTime_us = targetLoopTime_us;
 uint32_t time_ms = millis();
 int32_t lastRevTime_ms = -100000; // for calculating idling
-uint32_t pusherTimer_ms;
+uint32_t pusherTimer_ms = 0;
 uint32_t targetRPM = 0;
 uint32_t throttleValue = 0; // scale is 0 - 1999
 uint16_t batteryADC_mv = 0; // voltage at the ADC, after the voltage divider
@@ -176,7 +178,7 @@ void loop() {
     triggerSwitch.update();
   }
 
-  if (triggerSwitch.pressed()) {
+  if (triggerSwitch.pressed()) { // pressed and released are transitions, isPressed is for state
     if (bufferMode == 0) {
       shotsToFire = burstLength;
     } else if (bufferMode == 1) {
@@ -193,6 +195,7 @@ void loop() {
   }
 
   switch (flywheelState){
+
     case STATE_IDLE:
       if (triggerSwitch.isPressed() || revSwitch.isPressed()) {
         targetRPM = revRPM;
@@ -204,17 +207,20 @@ void loop() {
         targetRPM = 0;
       }
       break;
+
     case STATE_ACCELERATING:
       if ((closedLoopFlywheels)
       || (!closedLoopFlywheels && time_ms > lastRevTime_ms + firingDelay_ms)) {
         flywheelState = STATE_FULLSPEED;
       }
       break;
+
     case STATE_FULLSPEED:
       if (!revSwitch.isPressed() && shotsToFire == 0 && !firing) {
         flywheelState = STATE_IDLE;
       } else if (shotsToFire > 0 || firing) {
         switch (pusherType) {
+
           case PUSHER_MOTOR_CLOSEDLOOP:
             cycleSwitch.update();
             if (shotsToFire > 0 && !firing) { // start pusher stroke
@@ -237,7 +243,18 @@ void loop() {
               Serial.println("Pusher motor stalled!");
             }
             break;
+
           case PUSHER_SOLENOID_OPENLOOP:
+            if (shotsToFire > 0 && !firing && time_ms > pusherTimer_ms + solenoidRetractTime_ms) { // extend solenoid
+              digitalWrite(pins.pusher, HIGH);
+              firing = true;
+              shotsToFire -= 1;
+              pusherTimer_ms = time_ms;
+            } else if (firing && time_ms > pusherTimer_ms + solenoidExtendTime_ms) { // retract solenoid
+              digitalWrite(pins.pusher, LOW);
+              firing = false;
+              pusherTimer_ms = time_ms;
+            }
             break;
         }
       }
