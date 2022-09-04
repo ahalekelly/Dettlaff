@@ -265,9 +265,9 @@ void loop() {
     // ray control code goes here
   } else {
     if (throttleValue == 0) {
-      throttleValue = maxThrottle * targetRPM / batteryADC_mv * 1000 / scaledMotorKv;
+      throttleValue = min(maxThrottle, maxThrottle * targetRPM / batteryADC_mv * 1000 / scaledMotorKv);
     } else {
-      throttleValue = max(maxThrottle * targetRPM / batteryADC_mv * 1000 / scaledMotorKv,
+      throttleValue = max(min(maxThrottle, maxThrottle * targetRPM / batteryADC_mv * 1000 / scaledMotorKv),
       throttleValue-spindownSpeed);
     }
   }
