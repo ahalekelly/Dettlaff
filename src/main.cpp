@@ -92,11 +92,11 @@ pins_t pins = pins_v0_3_n20;
 uint32_t loopStartTimer_us = micros();
 uint16_t loopTime_us = targetLoopTime_us;
 uint32_t time_ms = millis();
-int32_t lastRevTime_ms = -100000; // for calculating idling
+uint32_t lastRevTime_ms = 0; // for calculating idling
 uint32_t pusherTimer_ms = 0;
 uint32_t targetRPM = 0;
 uint32_t throttleValue = 0; // scale is 0 - 1999
-uint16_t batteryADC_mv = 0; // voltage at the ADC, after the voltage divider
+uint32_t batteryADC_mv = 1000; // voltage at the ADC, after the voltage divider
 uint16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
@@ -201,7 +201,7 @@ void loop() {
         targetRPM = revRPM;
         lastRevTime_ms = time_ms;
         flywheelState = STATE_ACCELERATING;
-      } else if (time_ms < lastRevTime_ms+idleTime_ms) { // idle flywheels
+      } else if (time_ms < lastRevTime_ms + idleTime_ms && lastRevTime_ms > 0) { // idle flywheels
         targetRPM = idleRPM;
       } else { // stop flywheels
         targetRPM = 0;
@@ -232,8 +232,8 @@ void loop() {
               digitalWrite(pins.pusher, HIGH);
               digitalWrite(pins.pusherBrake, HIGH);
               firing = false;
-            } else if (firing && cycleSwitch.released()) {
-              shotsToFire = max(0, shotsToFire-1);
+            } else if (firing && shotsToFire > 0 && cycleSwitch.released()) {
+              shotsToFire = shotsToFire-1;
               pusherTimer_ms = time_ms;
             } else if (firing && time_ms > pusherTimer_ms + pusherStallTime_ms) { // stall protection
               digitalWrite(pins.pusher, LOW); // let pusher coast
@@ -264,8 +264,12 @@ void loop() {
   if (closedLoopFlywheels) {
     // ray control code goes here
   } else {
-    throttleValue = max(maxThrottle * targetRPM / batteryADC_mv * 1000 / scaledMotorKv,
-    throttleValue-spindownSpeed);
+    if (throttleValue == 0) {
+      throttleValue = maxThrottle * targetRPM / batteryADC_mv * 1000 / scaledMotorKv;
+    } else {
+      throttleValue = max(maxThrottle * targetRPM / batteryADC_mv * 1000 / scaledMotorKv,
+      throttleValue-spindownSpeed);
+    }
   }
 
   // send signal to ESCs
