@@ -1,3 +1,5 @@
+#ifndef __types_h_
+#define __types_h_
 #include <Arduino.h>
 
 enum flywheelState_t {
@@ -27,3 +29,4 @@ enum pusherType_t {
   PUSHER_MOTOR_CLOSEDLOOP,
   PUSHER_SOLENOID_OPENLOOP
 };
+#endif

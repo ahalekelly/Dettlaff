@@ -5,117 +5,50 @@
 #include "DShotRMT.h"
 #include "ESP32Servo.h"
 #include "types.h"
+#include "boards_config.cpp"
 
 // Configuration Variables
+
 char wifiSsid[32] = "ssid";
 char wifiPass[63] = "pass";
 uint32_t revRPM = 50000;
 uint32_t idleRPM = 1000;
-uint32_t idleTime_ms = 30000;
-uint32_t scaledMotorKv = 2550 * 11; // motor kv * battery voltage resistor divider ratio
+uint32_t idleTime_ms = 30000; // how long to idle the flywheels for
+uint32_t motorKv = 2550;
+pins_t pins = pins_v0_4_noid;
+// Options:
+// pins_v0_4_n20
+// pins_v0_4_noid
+// pins_v0_3_n20
+// pins_v0_3_noid
+// pins_v0_2
+// pins_v0_1
+// _noid means use the flywheel output to drive a solenoid pusher
+pusherType_t pusherType = PUSHER_SOLENOID_OPENLOOP;
+// PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
 uint16_t burstLength = 3;
 uint8_t bufferMode = 1;
 // 0 = stop firing when trigger is released
 // 1 = complete current burst when trigger is released
 // 2 = fire as many bursts as trigger pulls
 // for full auto, set burstLength high (50+) and bufferMode = 0
-bool closedLoopFlywheels = false;
-uint16_t firingDelay_ms = 200;
-pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP; // PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
-uint16_t pusherStallTime_ms = 5000;
-uint16_t solenoidExtendTime_ms = 20;
-uint16_t solenoidRetractTime_ms = 60;
-uint16_t spindownSpeed = 1;
+uint16_t firingDelay_ms = 200; // delay to allow flywheels to spin up before pushing dart
+uint16_t solenoidExtendTime_ms = 22;
+uint16_t solenoidRetractTime_ms = 78;
+
+// Advanced Configuration Variables
+
+uint16_t pusherStallTime_ms = 500; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?
+uint16_t spindownSpeed = 1; // higher number makes the flywheels spin down faster when releasing the rev trigger
 bool revSwitchNormallyClosed = false; // should we invert rev signal?
 bool triggerSwitchNormallyClosed = false;
 bool cycleSwitchNormallyClosed = false;
-uint16_t debounceTime = 50; // ms
-// make sure you select which pinout you need below the pin definitions!
-
-// Advanced Configuration Variables
+uint16_t debounceTime = 25; // ms
 char AP_SSID[32] = "Dettlaff";
 char AP_PW[32] = "KellyIndu";
 dshot_mode_t dshotMode =  DSHOT300; // DSHOT_OFF to fall back to servo PWM
 uint16_t targetLoopTime_us = 1000; // microseconds
 
-const pins_t pins_v0_4_n20 = {
-  .revSwitch = 15,
-  .triggerSwitch = 32,
-  .cycleSwitch = 23,
-  .flywheel = 2,
-  .pusher = 12,
-  .pusherBrake = 13,
-  .esc1 = 19,
-  .esc2 = 18,
-  .esc3 = 5,
-  .esc4 = 17,
-  .telem = 16,
-  .button = 0,
-  .batteryADC = 35,
-}; 
-
-const pins_t pins_v0_4_noid = {
-  .revSwitch = 15,
-  .triggerSwitch = 32,
-  .pusher = 2,
-  .esc1 = 19,
-  .esc2 = 18,
-  .esc3 = 5,
-  .esc4 = 17,
-  .telem = 16,
-  .button = 0,
-  .batteryADC = 35,
-};
-
-const pins_t pins_v0_3_n20 = {
-  .revSwitch = 15,
-  .triggerSwitch = 32,
-  .cycleSwitch = 23,
-  .flywheel = 2,
-  .pusher = 12,
-  .pusherBrake = 13,
-  .esc1 = 19,
-  .esc2 = 18,
-  .esc3 = 5,
-  .esc4 = 17,
-  .telem = 16,
-  .button = 0,
-  .batteryADC = 33,
-};
-
-const pins_t pins_v0_3_noid = {
-  .revSwitch = 15,
-  .triggerSwitch = 32,
-  .pusher = 2,
-  .esc1 = 19,
-  .esc2 = 18,
-  .esc3 = 5,
-  .esc4 = 17,
-  .telem = 16,
-  .button = 0,
-  .batteryADC = 33,
-};
-
-const pins_t pins_v0_2 = {
-  .revSwitch = 15,
-  .esc1 = 19,
-  .esc2 = 18,
-  .esc3 = 5,
-  .esc4 = 17,
-  .telem = 16,
-  .button = 0,
-  .batteryADC = 12,
-};
-
-const pins_t pins_v0_1 = {
-  .revSwitch = 12,
-  .esc1 = 4,
-  .esc2 = 2,
-  .esc3 = 15,
-  .esc4 = 13,
-};
-
-pins_t pins = pins_v0_4_n20;
 
 // End Configuration Variables
 
@@ -130,6 +63,8 @@ uint32_t batteryADC_mv = 1340; // voltage at the ADC, after the voltage divider
 uint16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
+bool closedLoopFlywheels = false;
+uint32_t scaledMotorKv = motorKv * 11; // motor kv * battery voltage resistor divider ratio
 
 const uint32_t maxThrottle = 1999;
 
