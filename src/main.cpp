@@ -7,6 +7,10 @@
 #include "types.h"
 #include "boards_config.cpp"
 
+#include <SimpleSerialShell.h>
+
+#include "Pushers/solenoid.h"
+
 // Configuration Variables
 
 char wifiSsid[32] = "ssid";
@@ -88,6 +92,10 @@ void setup()
 {
   Serial.begin(115200);
   Serial.println("Booting");
+
+  shell.attach(Serial);
+  shell.addCommand(F("Solenoid"), shellCommandSolenoid);
+
   if (pins.flywheel)
   {
     pinMode(pins.flywheel, OUTPUT);
@@ -256,7 +264,7 @@ void loop()
 
       case PUSHER_SOLENOID_OPENLOOP:
         // extend solenoid
-        if (shotsToFire > 0 && !firing && time_ms > pusherTimer_ms + solenoid.mSolenoidRetractTime_ms)
+        if (shotsToFire > 0 && !firing && time_ms > pusherTimer_ms + solenoidRetractTime_ms)
         {
           digitalWrite(pins.pusher, HIGH);
           firing = true;
@@ -265,7 +273,7 @@ void loop()
           Serial.println("solenoid extending");
         }
         // retract solenoid
-        else if (firing && time_ms > pusherTimer_ms + solenoid.mSolenoidRetractTime_ms)
+        else if (firing && time_ms > pusherTimer_ms + solenoidRetractTime_ms)
         {
           digitalWrite(pins.pusher, LOW);
           firing = false;
@@ -321,6 +329,8 @@ void loop()
   {
     delayMicroseconds(max((long)(0), (long)(targetLoopTime_us - loopTime_us)));
   }
+
+  shell.executeIfInput();
 }
 
 void WiFiInit()
