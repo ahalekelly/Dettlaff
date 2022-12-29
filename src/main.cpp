@@ -20,6 +20,8 @@
 
 #include "Pushers/solenoid.h"
 
+#include "bleUtils.h"
+
 // Configuration Variables
 
 char wifiSsid[32] = "ssid";
@@ -130,6 +132,11 @@ void setup()
     }
     */
     Serial2.begin(115200, SERIAL_8N1, pins.telem, 4); // need to find a pin that's unused to use as telemetry serial TX - pin 4 is ESC1 on v0.1 but unused on v0.2-v0.4
+
+    shell.attach(Serial);
+    shell.addCommand(F("solenoid"), shellCommandSolenoid);
+    shell.addCommand(F("battery"), shellCommandBattLevel);
+
     pinMode(pins.telem, INPUT_PULLUP);
     if (pins.revSwitch) {
         revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
@@ -161,6 +168,8 @@ void setup()
             dshot[i].begin(dshotMode, false); // bitrate & bidirectional
         }
     }
+
+    InitBLE();
 }
 
 void loop()
