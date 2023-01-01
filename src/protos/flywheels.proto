@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+/*************************************************/
+/******** Main messages that will be sent ********/
+/*************************************************/
+
+message FlywheelConfig {
+    repeated int32 controlPins = 0;
+    telemMethod telemetry = 1;
+    // Both no telemetry and bidirectional Dshot will not have any telemetry pins
+    // Serial and tachometer will likely only have one pin, but we could support having them communicate on multiple pins
+    repeated int32 telemPins = 2;
+
+    int32 motorKv = 3;
+    dshotModes dshotMode = 4;
+}
+
+message ClosedLoopFlywheelParams {
+    int32 revRpm = 0;
+    int32 idleRpm = 1;
+    int32 idleTime_ms = 2;
+
+    // Should this be rpm? Percent of rev rpm?
+    int32 firingThresholdRpm = 3;
+
+    // Can we get some sort of unit on this?
+    int32 spindownSpeed = 4;
+}
+
+message OpenLoopFlywheelParams {
+    int32 revDutyCycle = 0;
+    int32 idleDutyCycle = 1;
+    int32 idleTime_ms = 2;
+
+    // The minimum amount of time that the flywheels must have revved before the pusher can be triggered
+    int32 minimumRevTime_ms = 3;
+    // The minimum amount of time that allows the flywheels to spin back up after firing a dart
+    int32 delayBetweenDarts_ms = 4;
+
+    // Does not apply to binary brushed setups since we have no way to control the speed
+    // Can we get some sort of unit on this?
+    int32 spindownSpeed = 5;
+}
+
+/*************************************************/
+/************** Enums and sub-types **************/
+/*************************************************/
+
+enum motorControlMethod {
+    ESC_DSHOT = 0;
+    ESC_PWM = 1;
+    BRUSHED_PWM = 2;
+    // Is binary the right word for something like a relay that's only on or off?
+    BRUSHED_BINARY = 3;
+}
+
+enum telemMethod {
+    NO_TELEMETRY = 0;
+    BIDIRECTIONAL_DSHOT = 1;
+    SERIAL = 2;
+    // Is this specific enough or to generic?
+    TACHOMETER = 3;
+}
+
+// The various dshot modes may not be supported by all escs
+// Selecting DSHOT_OFF when config specifies DSHOT will throw an error
+// Conversely, values selected here when a non Dshot control method is selected will be ignored
+enum dshotModes {
+    DSHOT_OFF = 0;
+    DSHOT_150 = 1;
+    DSHOT_300 = 2;
+    DSHOT_600 = 3;
+    DSHOT_1200 = 4;
+}
+
+enum FlywheelControlInputType {
+    FLYWHEEL_UNSPECIFIED = 0;
+    FLYWHEEL_RPM = 1;
+    // Maybe we don't have exact rpm data, but we've got a simple controller that gives us a ready signal at a set rpm
+    //  that it keeps track of internally?
+    FLYWHEEL_READY = 2;
+}
