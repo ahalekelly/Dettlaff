@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+/*************************************************/
+/******** Main messages that will be sent ********/
+/*************************************************/
+
+message FlywheelConfig {
+    MotorControlMethod controlMethod = 1;
+    DshotModes dshotMode = 2;
+    TelemMethod telemetryMethod = 3;
+    // A pin that allows us to shut off power to the esc to save power. This may not exist if we're using the flywheel
+    // control FET to control a high current pusher
+    repeated MotorConfig = 4;
+}
+
+message ClosedLoopFlywheelParams {
+    int32 revRpm = 1;
+    int32 idleRpm = 2;
+    int32 idleTime_ms = 4;
+
+    // TODO(Issue #21) Figure out and docment the spindown logic
+    int32 spindownSpeed = 5;
+}
+
+message OpenLoopFlywheelParams {
+    int32 revRpm = 1;
+    int32 idleRpm = 2;
+    int32 idleTime_ms = 3;
+
+    // The minimum amount of time that the flywheels must have revved from standstill before the pusher can be triggered
+    int32 minimumRevTime_ms = 4;
+    // The minimum amount of time that the flywheels must have revved from idling before the pusher can be triggered
+    // This is optional; if idling is not used, we will fall back to minimumRevTime_ms
+    int32 minimumIdleRevTime_ms = 5;
+
+    // Does not apply to binary brushed setups since we have no way to control the speed
+    // Can we get some sort of unit on this?
+    int32 spindownSpeed = 7;
+}
+
+/*************************************************/
+/************** Enums and sub-types **************/
+/*************************************************/
+
+enum MotorControlMethod {
+    ESC_DSHOT = 0;
+    ESC_PWM = 1;
+    BRUSHED_PWM = 2;
+    // Is binary the right word for something like a relay that's only on or off?
+    BRUSHED_BINARY = 3;
+}
+
+enum TelemMethod {
+    NO_TELEMETRY = 0;
+    BIDIRECTIONAL_DSHOT = 1;
+    SERIAL = 2;
+    // Is this specific enough or too generic?
+    TACHOMETER = 3;
+}
+
+// The various dshot modes may not be supported by all escs
+// Selecting DSHOT_OFF when config specifies DSHOT will throw an error
+// Conversely, values selected here when a non Dshot control method is selected will be ignored
+enum DshotModes {
+    DSHOT_OFF = 0;
+    DSHOT_150 = 1;
+    DSHOT_300 = 2;
+    DSHOT_600 = 3;
+    DSHOT_1200 = 4;
+}
+
+message MotorConfig {
+    int32 motorKv = 1;
+    int32 revRPM = 2;
+    int32 idleRPM = 3;
+    int32 firingThresholdRpm = 4;
+}

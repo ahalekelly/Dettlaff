@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+/*************************************************/
+/******** Main messages that will be sent ********/
+/*************************************************/
+
+// Configuration details that may or may not require a reboot to implement
+message PusherConfig {
+    PusherType type = 1;
+    // This input can be used for cycle control switches; it's also acceptable to have no control inputs
+    repeated PusherControlInput controlInputs = 2;
+
+    oneof PusherTimings{
+        MotorTimings motorTiming = 3;
+        SolenoidTimings solenoidTiming = 4;
+    }
+    int32 pusherVoltage_mv = 5;
+    bool pusherDirectionReverse = 6;
+}
+
+/*************************************************/
+/************** Enums and sub-types **************/
+/*************************************************/
+
+enum PusherType {
+    PUSHER_MOTOR_CLOSEDLOOP = 0;
+    PUSHER_SOLENOID_CLOSEDLOOP = 1;
+    // Do we want to support open loop motor pushers?
+    PUSHER_MOTOR_OPENLOOP = 2;
+    PUSHER_SOLENOID_OPENLOOP = 3;
+}
+
+message PusherControlInput {
+    PusherControlInputType type = 1;
+    int32 dataPin = 2;
+}
+
+enum PusherControlInputType {
+    // There's no null value here because the whole enum is optional; if we don't need one, we just won't include it
+    PUSHER_REARMOST = 0;
+    PUSHER_FOREMOST = 1;
+    // This may need more than 1 pin, or some sort of enum for how it's controlled, this would probaby be fine if we
+    //  just need an i2c address or something
+    PUSHER_POSITION = 2;
+}
+
+message MotorTimings {
+    // The maximum amount of time the pusher should take to transition between stages
+    // If we have foremost and rearmost switched, then the maximum amount of time an extension or retraction can take
+    // If we only have rearmost, the maximum amount of time it can take to complete a cycle
+    // If we lack control inputs, this is undefined
+    int32 stallTime_ms = 1;
+}
+
+message SolenoidTimings {
+    // The maximum amount of time the pusher will be extended
+    // If we have a foremost control intput and we don't see it trigger in this time, we have a jam and will attempt
+    //  to fix or alert the user
+    // Is there any case (like single fire or firemode 1) where we'd want the pusher to stay extended while the user holds down the trigger?
+    int32 extendTime = 1;
+    // The minium amount of time the plunger must be retracting before the system can fire again
+    // If we have a rearmost control input and we don't see it trigger in this time, we have a jam and will attempt
+    //  to fix or alert the user
+    int32 retractTime = 2;
+}

@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+/*************************************************/
+/******** Main messages that will be sent ********/
+/*************************************************/
+
+message ControlConfig {
+    // The main firing trigger that requests a dart out the barrel, ASAP
+    int32 triggerSwitchPin = 1;
+    SwitchOrientation TriggerSwitchOrientation = 2;
+    // An optional switch that requests the flywheels rev up to full (or idle? partial?) speed
+    int32 optRevSwitchPin = 3;
+    SwitchOrientation optRevSwitchOrientation = 4;
+    // Which button is this?
+    int32 fireModeCycleButtonPin = 5;
+}
+
+message ControlParams {
+    // A repeating list of burst lengths and fps will let users configure any number and order of firing patterns that
+    //  they'd like (within reason; we'll probably need to cap the list at something reasonable).
+    // A burst length of 0 is safe, 1 is semi-auto, 255 is full auto, and anything in between is a valid (if silly)
+    //  burst length
+    // The user could then cycle between the burst lengths with a button, rotaty dial, etc that the user defines in the
+    //  controls proto
+    repeated FireModeEntry fireModesArray = 1;
+    // Lets the user switch firing modes over ble.
+    // It may or may not update live
+    int32 currentFiringMode = 2;
+}
+
+/*************************************************/
+/************** Enums and sub-types **************/
+/*************************************************/
+
+message FireModeEntry {
+    int32 rpm = 1;
+    int32 burstLength = 2;
+    PusherBurstType type = 3;
+}
+
+enum PusherBurstType {
+    // The pusher will stop as soon as the current cycle completes, even if it's short of the burst count
+    PUSHER_BURST_STOP = 0;
+    // The pusher will stop after it has fired the current n-dart burst
+    PUSHER_BURST_COMPLETE = 1;
+    // The pusher will count the number of times the trigger has been released and fire that many bursts
+
+    // or is _QUEUE a better descriptor of what this is?
+    PUSHER_BURST_COUNT = 2;
+}
+
+enum SwitchOrientation {
+    SWITCH_NORMALLY_OPEN = 0;
+    SWITCH_NORMALLY_CLOSED = 1;
+}
