@@ -5,41 +5,41 @@ syntax = "proto3";
 /*************************************************/
 
 message FlywheelConfig {
-    repeated int32 controlPins = 0;
-    telemMethod telemetry = 1;
+    repeated int32 controlPins = 1;
+    telemMethod telemetry = 2;
     // Both no telemetry and bidirectional Dshot will not have any telemetry pins
     // Serial and tachometer will likely only have one pin, but we could support having them communicate on multiple pins
-    repeated int32 telemPins = 2;
+    repeated int32 telemPins = 3;
 
-    int32 motorKv = 3;
-    dshotModes dshotMode = 4;
+    int32 motorKv = 4;
+    dshotModes dshotMode = 5;
 }
 
 message ClosedLoopFlywheelParams {
-    int32 revRpm = 0;
-    int32 idleRpm = 1;
-    int32 idleTime_ms = 2;
+    int32 revRpm = 1;
+    int32 idleRpm = 2;
+    int32 idleTime_ms = 4;
 
     // Should this be rpm? Percent of rev rpm?
-    int32 firingThresholdRpm = 3;
+    int32 firingThresholdRpm = 5;
 
     // Can we get some sort of unit on this?
-    int32 spindownSpeed = 4;
+    int32 spindownSpeed = 6;
 }
 
 message OpenLoopFlywheelParams {
-    int32 revDutyCycle = 0;
-    int32 idleDutyCycle = 1;
-    int32 idleTime_ms = 2;
+    int32 revDutyCycle = 1;
+    int32 idleDutyCycle = 2;
+    int32 idleTime_ms = 3;
 
     // The minimum amount of time that the flywheels must have revved before the pusher can be triggered
-    int32 minimumRevTime_ms = 3;
+    int32 minimumRevTime_ms = 4;
     // The minimum amount of time that allows the flywheels to spin back up after firing a dart
-    int32 delayBetweenDarts_ms = 4;
+    int32 delayBetweenDarts_ms = 5;
 
     // Does not apply to binary brushed setups since we have no way to control the speed
     // Can we get some sort of unit on this?
-    int32 spindownSpeed = 5;
+    int32 spindownSpeed = 6;
 }
 
 /*************************************************/

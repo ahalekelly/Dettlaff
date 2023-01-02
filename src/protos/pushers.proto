@@ -6,30 +6,30 @@ syntax = "proto3";
 
 // Configuration details that may or may not require a reboot to implement
 message PusherConfig {
-    PusherType type = 0;
-    int32 ExtendPin = 1;
-    bool CanBrake = 2;
+    PusherType type = 1;
+    int32 ExtendPin = 2;
+    bool CanBrake = 3;
     // Can be skipped if CanBrake == false
-    int32 BrakePin = 3;
+    int32 BrakePin = 4;
     // This input can be used for cycle control switches; it's also acceptable to have no control inputs
-    repeated PusherControlInput = 4;
+    repeated PusherControlInput ControlInputs = 5;
 
     oneof PusherTimings{
-        MotorTimings = 5;
-        SolenoidTimings = 6;
+        MotorTimings MotorTiming = 6;
+        SolenoidTimings SolenoidTiming = 7;
     }
 }
 
 // Parameters that can be changed on the fly without needing a reboot
 message PusherParams {
-    int32 RateOfFire = 0;
+    int32 RateOfFire = 1;
     // A repeating list of burst lengths will let users configure any number and order of firing patterns that they'd
     //  like (within reason; we'll probably need to cap the list at something reasonable).
     // A burst length of 0 is safe, 1 is semi-auto, 255 is full auto, and anything in between is a valid (if silly)
     //  burst length
     // The user could then cycle between the burst lengths with a button, rotaty dial, etc that the user defines in the
     //  controls proto
-    repeated PusherBurstEntry BurstEntries = 1;
+    repeated PusherBurstEntry BurstEntries = 2;
 }
 
 /*************************************************/
@@ -45,8 +45,8 @@ enum PusherType {
 }
 
 message PusherControlInput {
-    enum PusherControlInputType = 0;
-    int32 DataPin = 1;
+    PusherControlInputType Type = 1;
+    int32 DataPin = 2;
 }
 
 enum PusherControlInputType {
@@ -59,8 +59,8 @@ enum PusherControlInputType {
 }
 
 message PusherBurstEntry {
-    int32 Length = 0;
-    PusherBurstType Type = 1;
+    int32 Length = 1;
+    PusherBurstType Type = 2;
 }
 
 enum PusherBurstType {
@@ -79,7 +79,7 @@ message MotorTimings {
     // If we have foremost and rearmost switched, then the maximum amount of time an extension or retraction can take
     // If we only have rearmost, the maximum amount of time it can take to complete a cycle
     // If we lack control inputs, this is undefined
-    int32 stallTime_ms = 0;
+    int32 stallTime_ms = 1;
 }
 
 message SolenoidTimings {
@@ -87,9 +87,9 @@ message SolenoidTimings {
     // If we have a foremost control intput and we don't see it trigger in this time, we have a jam and will attempt
     //  to fix or alert the user
     // Is there any case (like single fire or firemode 1) where we'd want the pusher to stay extended while the user holds down the trigger?
-    int32 maxExtendTime = 0;
+    int32 maxExtendTime = 1;
     // The minium amount of time the plunger must be retracting before the system can fire again
     // If we have a rearmost control input and we don't see it trigger in this time, we have a jam and will attempt
     //  to fix or alert the user
-    int32 minRetractTime = 1;
+    int32 minRetractTime = 2;
 }
