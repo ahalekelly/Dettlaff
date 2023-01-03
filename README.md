@@ -13,12 +13,12 @@ Dettlaff is a modular controller system for brushless flywheel Nerf blasters
 USB Troubleshooting:
 
 Dettlaff should enter upload mode automatically, but if it doesn't, the button on board can do it manually
-* Try holding the button as you hit upload, and keep holding until it says Uploading
-* Try holding the button on the board as you plug in the battery to Dettlaff, then letting go
+* Try holding the button on the board as you hit upload, and keep holding until it says Uploading
+* Try holding the button as you plug in the battery to Dettlaff, then letting go
 
 ## Flashing Firmware over WiFi:
 
 1. First, flash a firmware over USB with your wifi SSID and password
-2. Change the Project Environment (button that says "Default" on the bottom) to "env:esp32-wifi"
-3. Power cycle your Dettlaff
+2. In VSCode, change the Project Environment (button that says "Default" on the bottom toolbar) to "env:esp32-wifi"
+3. Turn on or power cycle (unplug, wait a few seconds, and plug back in) your Dettlaff
 4. Hit Upload within a few minutes of power cycling
