@@ -29,6 +29,8 @@ const uint32_t maxThrottle = 1999;
 uint32_t motorRPM[4] = { 0, 0, 0, 0 };
 Driver* pusher;
 bool wifiState = false;
+String telemBuffer = "";
+uint8_t telemMotorNum = 0; // 0-3
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
@@ -67,6 +69,9 @@ void setup()
     default:
         break;
     }
+
+    Serial2.begin(115200, SERIAL_8N1, pins.telem, -1);
+    pinMode(pins.telem, INPUT_PULLUP);
 
     if (pins.revSwitch) {
         revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
@@ -117,8 +122,13 @@ void loop()
         triggerSwitch.update();
     }
 
-    // *Need to implement*
-    // Get flywheel RPM data, store it in motorRPM
+    // Transfer data from telemetry serial port to telemetry serial buffer:
+    while (Serial2.available()) {
+        telemBuffer += Serial2.read(); // this doesn't seem to work - do we need 1k pullup resistor? also is this the most efficient way to do this?
+    }
+    // Then parse serial buffer, if serial buffer contains complete packet then update motorRPM value, clear serial buffer, and increment telemMotorNum to get the data for the next motor
+    // will we be able to detect the gaps between packets to know when a packet is complete? Need to test and see
+    Serial.println(telemBuffer);
 
     if (triggerSwitch.pressed()) { // pressed and released are transitions, isPressed is for state
         if (bufferMode == 0) {
@@ -271,10 +281,13 @@ void loop()
         //    Serial.println("");
     } else {
         for (int i = 0; i < numMotors; i++) {
-            if (throttleValue[i] == 0) {
-                dshot[i].send_dshot_value(0, NO_TELEMETRIC);
+            if (throttleValue[i] != 0 || blheli_esc) { // AM32 needs throttle value of 0 to arm?
+                throttleValue[i] += 48;
+            }
+            if (i == telemMotorNum) {
+                dshot[i].send_dshot_value(throttleValue[i], ENABLE_TELEMETRIC); // is there a way to have dshot library only send one telemetric packet? doesn't seem like it
             } else {
-                dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
+                dshot[i].send_dshot_value(throttleValue[i], NO_TELEMETRIC);
             }
         }
     }
