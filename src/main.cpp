@@ -13,7 +13,7 @@ char wifiSsid[32] = "ssid";
 char wifiPass[63] = "pass";
 uint8_t numMotors = 2; // 2 for single-stage, 4 for dual-stage
 uint32_t revRPM[4] = {50000, 50000, 50000, 50000};
-uint32_t idleRPM = 1000;
+uint32_t idleRPM[4] = {1000, 1000, 1000, 1000};
 uint32_t idleTime_ms = 30000; // how long to idle the flywheels for
 uint32_t motorKv = 2550;
 pins_t pins = pins_v0_4_noid;
@@ -60,7 +60,8 @@ uint16_t loopTime_us = targetLoopTime_us;
 uint32_t time_ms = millis();
 uint32_t lastRevTime_ms = 0; // for calculating idling
 uint32_t pusherTimer_ms = 0;
-uint32_t targetRPM[4] = {0, 0, 0, 0};
+uint32_t zeroRPM[4] = {0, 0, 0, 0};
+uint32_t (*targetRPM)[4]; // a pointer to a uint32_t[4] array. always points to either revRPM, idleRPM, or zeroRPM
 uint32_t throttleValue[4] = {0, 0, 0, 0}; // scale is 0 - 1999
 uint32_t batteryADC_mv = 1340; // voltage at the ADC, after the voltage divider
 uint16_t shotsToFire = 0;
@@ -163,41 +164,27 @@ void loop() {
 
     case STATE_IDLE:
       if (triggerSwitch.isPressed() || revSwitch.isPressed()) {
-        for (i = 0; i < numMotors; i++) {
-          targetRPM[i] = revRPM[i]; // ask Erik how to do this more elegantly
-        }
+        targetRPM = &revRPM;
         lastRevTime_ms = time_ms;
         flywheelState = STATE_ACCELERATING;
       } else if (time_ms < lastRevTime_ms + idleTime_ms && lastRevTime_ms > 0) { // idle flywheels
-        for (i = 0; i < numMotors; i++) {
-          targetRPM[i] = idleRPM;
-        }
+        targetRPM = &idleRPM;
       } else { // stop flywheels
-        for (i = 0; i < numMotors; i++) { // this loop isn't the best way to do this but array assignment wasn't behaving
-        // targetRPM = {0, 0, 0, 0}; // ask Erik how to make this work
-          targetRPM[i] = 0;
-        }
+        targetRPM = &zeroRPM;
       }
       break;
 
     case STATE_ACCELERATING:
       if (closedLoopFlywheels) {
-        // Algorithm to determine if flywheels are up to speed
-        // in the future add predictive capacity for when they'll be up to speed in the future
-        for (i = 0; i < numMotors; i++) {
-          if (motorRPM[i] < firingRPM[i])
-            break; // THIS STATEMENT IS POTENTIALLY PROBLEMATIC
+        // If ALL motors are at target RPM update the blaster's state to FULLSPEED.
+        // in the future add predictive capacity for when they'll be up to speed in the future, taking into account pusher delay
+        if ( motorRPM[0] > firingRPM[0] &&
+        (numMotors <= 1 || motorRPM[1] > firingRPM[1]) &&
+        (numMotors <= 2 || motorRPM[2] > firingRPM[2]) &&
+        (numMotors <= 3 || motorRPM[3] > firingRPM[3]) ) {
+          flywheelState = STATE_FULLSPEED;
         }
-        flywheelState = STATE_FULLSPEED;
 
-        // Use current flywheel speeds, save them to motorRPM[4]
-          // need to add the check somewhere else
-        // Compare current flywheel speeds and accelerations with target RPM, ideally have algorithm to determine
-        // firingRPM[4] values but will hard code a guess for now, and if flywheel RPM is above the firing RPM threshold
-        // then send signal to the pusher to push a dart (the latency before pushing is the time for the wheels to close the
-        // RPM gap between current RPM and the target RPM)
-
-      // If ALL motors are at target RPM update the blaster's state to FULLSPEED.
       } else if (!closedLoopFlywheels && time_ms > lastRevTime_ms + firingDelay_ms) {
         flywheelState = STATE_FULLSPEED;
       }
@@ -256,15 +243,12 @@ void loop() {
   } else { // open loop case
     for (i = 0; i < numMotors; i++) {
       if (throttleValue[i] == 0) {
-        throttleValue[i] = min(maxThrottle, maxThrottle * targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv);
+        throttleValue[i] = min(maxThrottle, maxThrottle * *targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv);
       } else {
-        throttleValue[i] = max(min(maxThrottle, maxThrottle * targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv),
+        throttleValue[i] = max(min(maxThrottle, maxThrottle * *targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv),
         throttleValue[i]-spindownSpeed);}
     }
   }
-
-  // rewrite throttle value for each ESC (4 total, can make an array potentially)
-  // can vectorize servo and dshot vars
 
   // send signal to ESCs
   if (dshotMode == DSHOT_OFF) {
