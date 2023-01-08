@@ -71,6 +71,8 @@ bool closedLoopFlywheels = false;
 uint32_t scaledMotorKv = motorKv * 11; // motor kv * battery voltage resistor divider ratio
 const uint32_t maxThrottle = 1999;
 uint32_t motorRPM[4] = {0, 0, 0, 0};
+String telemBuffer = "";
+uint8_t telemMotorNum = 0; // 0-3
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
@@ -92,6 +94,8 @@ void setup() {
     digitalWrite(pins.flywheel, HIGH);
   }
   WiFiInit();
+  Serial2.begin(115200, SERIAL_8N1, pins.telem, 4); // need to find a pin that's unused to use as telemetry serial TX - pin 4 is ESC1 on v0.1 but unused on v0.2-v0.4
+  pinMode(pins.telem, INPUT_PULLUP);
   if (pins.revSwitch) {
     revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
     revSwitch.interval(debounceTime);
@@ -140,8 +144,15 @@ void loop() {
     triggerSwitch.update();
   }
 
-  // *Need to implement*
-  // Get flywheel RPM data, store it in motorRPM
+  // Transfer data from telemetry serial port to telemetry serial buffer:
+  while (Serial2.available()) {
+    telemBuffer += Serial2.read(); // this doesn't seem to work - do we need 1k pullup resistor? also is this the most efficient way to do this?
+  }
+  // Then parse serial buffer, if serial buffer contains complete packet then update motorRPM value, clear serial buffer, and increment telemMotorNum to get the data for the next motor
+  // will we be able to detect the gaps between packets to know when a packet is complete? Need to test and see
+
+  // debug
+  Serial.println(telemBuffer);
 
   if (triggerSwitch.pressed()) { // pressed and released are transitions, isPressed is for state
     if (bufferMode == 0) {
@@ -239,6 +250,7 @@ void loop() {
 
   if (closedLoopFlywheels) {
     // --ray-- Andrew's control code goes here
+    // calculate throttleValue for each motor from targetRPM and motorRPM
   } else { // open loop case
     for (int i = 0; i < numMotors; i++) {
       if (throttleValue[i] == 0) {
@@ -255,8 +267,12 @@ void loop() {
       servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
     }
   } else {
-    for (int i = 0; i < numMotors; i++) {
-      dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
+    for (i = 0; i < numMotors; i++) {
+      if (i == telemMotorNum) {
+        dshot[i].send_dshot_value(throttleValue[i] + 48, ENABLE_TELEMETRIC); // is there a way to have dshot library only send one telemetric packet? doesn't seem like it
+      } else {
+        dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
+      }
     }
   }
   ArduinoOTA.handle();
