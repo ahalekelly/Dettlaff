@@ -274,8 +274,12 @@ void loop() {
       servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
     }
   } else {
-    for (int i = 0; i < numMotors; i++) {
-      dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
+    for (i = 0; i < numMotors; i++) {
+      if (i == telemMotorNum) {
+        dshot[i].send_dshot_value(throttleValue[i] + 48, ENABLE_TELEMETRIC); // is there a way to have dshot library only send one telemetric packet? doesn't seem like it
+      } else {
+        dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
+      }
     }
   }
   ArduinoOTA.handle();
