@@ -11,7 +11,8 @@
 
 char wifiSsid[32] = "ssid";
 char wifiPass[63] = "pass";
-uint32_t revRPM = 50000;
+uint8_t numMotors = 2; // 2 for single-stage, 4 for dual-stage
+uint32_t revRPM[4] = {50000, 50000, 50000, 50000};
 uint32_t idleRPM = 1000;
 uint32_t idleTime_ms = 30000; // how long to idle the flywheels for
 uint32_t motorKv = 2550;
@@ -35,6 +36,8 @@ uint8_t bufferMode = 1;
 uint16_t firingDelay_ms = 200; // delay to allow flywheels to spin up before pushing dart
 uint16_t solenoidExtendTime_ms = 22;
 uint16_t solenoidRetractTime_ms = 78;
+uint32_t firingRPM[4] = {revRPM[0]*9/10, revRPM[1]*9/10,
+                         revRPM[2]*9/10, revRPM[3]*9/10};
 
 // Advanced Configuration Variables
 
@@ -57,31 +60,27 @@ uint16_t loopTime_us = targetLoopTime_us;
 uint32_t time_ms = millis();
 uint32_t lastRevTime_ms = 0; // for calculating idling
 uint32_t pusherTimer_ms = 0;
-uint32_t targetRPM = 0;
-uint32_t throttleValue = 0; // scale is 0 - 1999
+uint32_t targetRPM[4] = {0, 0, 0, 0};
+uint32_t throttleValue[4] = {0, 0, 0, 0}; // scale is 0 - 1999
 uint32_t batteryADC_mv = 1340; // voltage at the ADC, after the voltage divider
 uint16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
 bool closedLoopFlywheels = false;
 uint32_t scaledMotorKv = motorKv * 11; // motor kv * battery voltage resistor divider ratio
-
+uint8_t i = 0; // for loops later on
 const uint32_t maxThrottle = 1999;
+uint32_t motorRPM[4] = {0, 0, 0, 0};
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
 Bounce2::Button cycleSwitch = Bounce2::Button();
 Bounce2::Button button = Bounce2::Button();
 
-Servo servo1;
-Servo servo2;
-Servo servo3;
-Servo servo4;
-
-DShotRMT dshot1(pins.esc1, RMT_CHANNEL_1);
-DShotRMT dshot2(pins.esc2, RMT_CHANNEL_2);
-DShotRMT dshot3(pins.esc3, RMT_CHANNEL_3);
-DShotRMT dshot4(pins.esc4, RMT_CHANNEL_4);
+// Declare servo variables for each motor. 
+Servo servo[4];
+DShotRMT dshot[4] = {DShotRMT(pins.esc1, RMT_CHANNEL_1), DShotRMT(pins.esc2, RMT_CHANNEL_2),
+                     DShotRMT(pins.esc3, RMT_CHANNEL_3), DShotRMT(pins.esc4, RMT_CHANNEL_4)};
 
 void WiFiInit();
 
@@ -114,24 +113,20 @@ void setup() {
     pinMode(pins.pusherBrake, OUTPUT);
     digitalWrite(pins.pusherBrake, LOW);
   }
+
   if (dshotMode == DSHOT_OFF) {
-    ESP32PWM::allocateTimer(0);
-    ESP32PWM::allocateTimer(1);
-    ESP32PWM::allocateTimer(2);
-    ESP32PWM::allocateTimer(3);
-    servo1.setPeriodHertz(200);
-    servo2.setPeriodHertz(200);
-    servo3.setPeriodHertz(200);
-    servo4.setPeriodHertz(200);
-    servo1.attach(pins.esc1);
-    servo2.attach(pins.esc2);
-    servo3.attach(pins.esc3);
-    servo4.attach(pins.esc4);
+    for (i = 0; i < 4; i++) {
+      ESP32PWM::allocateTimer(i);
+      servo[i].setPeriodHertz(200);
+    }
+    servo[1].attach(pins.esc1);
+    servo[2].attach(pins.esc2);
+    servo[3].attach(pins.esc3);
+    servo[4].attach(pins.esc4);
   } else {
-    dshot1.begin(dshotMode, false);  // bitrate & bidirectional
-    dshot2.begin(dshotMode, false);
-    dshot3.begin(dshotMode, false);
-    dshot4.begin(dshotMode, false);
+    for (i = 0; i < numMotors; i++) {
+      dshot[i].begin(dshotMode, false); // bitrate & bidirectional
+    }
   }
 }
 
@@ -144,6 +139,9 @@ void loop() {
   if (pins.triggerSwitch) {
     triggerSwitch.update();
   }
+
+  // *Need to implement*
+  // Get flywheel RPM data, store it in motorRPM
 
   if (triggerSwitch.pressed()) { // pressed and released are transitions, isPressed is for state
     if (bufferMode == 0) {
@@ -165,19 +163,42 @@ void loop() {
 
     case STATE_IDLE:
       if (triggerSwitch.isPressed() || revSwitch.isPressed()) {
-        targetRPM = revRPM;
+        for (i = 0; i < numMotors; i++) {
+          targetRPM[i] = revRPM[i]; // ask Erik how to do this more elegantly
+        }
         lastRevTime_ms = time_ms;
         flywheelState = STATE_ACCELERATING;
       } else if (time_ms < lastRevTime_ms + idleTime_ms && lastRevTime_ms > 0) { // idle flywheels
-        targetRPM = idleRPM;
+        for (i = 0; i < numMotors; i++) {
+          targetRPM[i] = idleRPM;
+        }
       } else { // stop flywheels
-        targetRPM = 0;
+        for (i = 0; i < numMotors; i++) { // this loop isn't the best way to do this but array assignment wasn't behaving
+        // targetRPM = {0, 0, 0, 0}; // ask Erik how to make this work
+          targetRPM[i] = 0;
+        }
       }
       break;
 
     case STATE_ACCELERATING:
-      if ((closedLoopFlywheels)
-      || (!closedLoopFlywheels && time_ms > lastRevTime_ms + firingDelay_ms)) {
+      if (closedLoopFlywheels) {
+        // Algorithm to determine if flywheels are up to speed
+        // in the future add predictive capacity for when they'll be up to speed in the future
+        for (i = 0; i < numMotors; i++) {
+          if (motorRPM[i] < firingRPM[i])
+            break; // THIS STATEMENT IS POTENTIALLY PROBLEMATIC
+        }
+        flywheelState = STATE_FULLSPEED;
+
+        // Use current flywheel speeds, save them to motorRPM[4]
+          // need to add the check somewhere else
+        // Compare current flywheel speeds and accelerations with target RPM, ideally have algorithm to determine
+        // firingRPM[4] values but will hard code a guess for now, and if flywheel RPM is above the firing RPM threshold
+        // then send signal to the pusher to push a dart (the latency before pushing is the time for the wheels to close the
+        // RPM gap between current RPM and the target RPM)
+
+      // If ALL motors are at target RPM update the blaster's state to FULLSPEED.
+      } else if (!closedLoopFlywheels && time_ms > lastRevTime_ms + firingDelay_ms) {
         flywheelState = STATE_FULLSPEED;
       }
       break;
@@ -231,30 +252,32 @@ void loop() {
   }
 
   if (closedLoopFlywheels) {
-    // ray control code goes here
-  } else {
-    if (throttleValue == 0) {
-      throttleValue = min(maxThrottle, maxThrottle * targetRPM / batteryADC_mv * 1000 / scaledMotorKv);
-    } else {
-      throttleValue = max(min(maxThrottle, maxThrottle * targetRPM / batteryADC_mv * 1000 / scaledMotorKv),
-      throttleValue-spindownSpeed);
+    // --ray-- Andrew's control code goes here
+  } else { // open loop case
+    for (i = 0; i < numMotors; i++) {
+      if (throttleValue[i] == 0) {
+        throttleValue[i] = min(maxThrottle, maxThrottle * targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv);
+      } else {
+        throttleValue[i] = max(min(maxThrottle, maxThrottle * targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv),
+        throttleValue[i]-spindownSpeed);}
     }
   }
 
+  // rewrite throttle value for each ESC (4 total, can make an array potentially)
+  // can vectorize servo and dshot vars
+
   // send signal to ESCs
   if (dshotMode == DSHOT_OFF) {
-    servo1.writeMicroseconds(throttleValue/2 + 1000);
-    servo2.writeMicroseconds(throttleValue/2 + 1000);
-    servo3.writeMicroseconds(throttleValue/2 + 1000);
-    servo4.writeMicroseconds(throttleValue/2 + 1000);
+    for (i = 0; i < numMotors; i++) {
+      servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
+    }
   } else {
-    dshot1.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
-    dshot2.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
-    dshot3.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
-    dshot4.send_dshot_value(throttleValue+48, NO_TELEMETRIC);
+    for (i = 0; i < numMotors; i++) {
+      dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
+    }
   }
   ArduinoOTA.handle();
-  loopTime_us = micros() - loopStartTimer_us;
+  loopTime_us = micros() - loopStartTimer_us; // 'us' is microseconds
   if (loopTime_us > targetLoopTime_us) {
     Serial.print("loop over time, ");
     Serial.println(loopTime_us);
