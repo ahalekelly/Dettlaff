@@ -69,7 +69,6 @@ flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
 bool closedLoopFlywheels = false;
 uint32_t scaledMotorKv = motorKv * 11; // motor kv * battery voltage resistor divider ratio
-uint8_t i = 0; // for loops later on
 const uint32_t maxThrottle = 1999;
 uint32_t motorRPM[4] = {0, 0, 0, 0};
 
@@ -116,7 +115,7 @@ void setup() {
   }
 
   if (dshotMode == DSHOT_OFF) {
-    for (i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
       ESP32PWM::allocateTimer(i);
       servo[i].setPeriodHertz(200);
     }
@@ -125,7 +124,7 @@ void setup() {
     servo[3].attach(pins.esc3);
     servo[4].attach(pins.esc4);
   } else {
-    for (i = 0; i < numMotors; i++) {
+    for (int i = 0; i < numMotors; i++) {
       dshot[i].begin(dshotMode, false); // bitrate & bidirectional
     }
   }
@@ -241,7 +240,7 @@ void loop() {
   if (closedLoopFlywheels) {
     // --ray-- Andrew's control code goes here
   } else { // open loop case
-    for (i = 0; i < numMotors; i++) {
+    for (int i = 0; i < numMotors; i++) {
       if (throttleValue[i] == 0) {
         throttleValue[i] = min(maxThrottle, maxThrottle * *targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv);
       } else {
@@ -252,11 +251,11 @@ void loop() {
 
   // send signal to ESCs
   if (dshotMode == DSHOT_OFF) {
-    for (i = 0; i < numMotors; i++) {
+    for (int i = 0; i < numMotors; i++) {
       servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
     }
   } else {
-    for (i = 0; i < numMotors; i++) {
+    for (int i = 0; i < numMotors; i++) {
       dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
     }
   }
