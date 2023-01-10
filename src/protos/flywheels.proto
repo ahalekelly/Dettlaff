@@ -5,14 +5,14 @@ syntax = "proto3";
 /*************************************************/
 
 message FlywheelConfig {
-    repeated int32 controlPins = 1;
-    telemMethod telemetry = 2;
+    MotorControlMethod controlMethod = 1;
+    DshotModes dshotMode = 2;
+    repeated int32 controlPins = 3;
+    TelemMethod telemetryMethod = 4;
     // Both no telemetry and bidirectional Dshot will not have any telemetry pins
     // Serial and tachometer will likely only have one pin, but we could support having them communicate on multiple pins
-    repeated int32 telemPins = 3;
-
-    int32 motorKv = 4;
-    dshotModes dshotMode = 5;
+    repeated int32 telemPins = 5;
+    int32 motorKv = 6;
 }
 
 message ClosedLoopFlywheelParams {
@@ -46,7 +46,7 @@ message OpenLoopFlywheelParams {
 /************** Enums and sub-types **************/
 /*************************************************/
 
-enum motorControlMethod {
+enum MotorControlMethod {
     ESC_DSHOT = 0;
     ESC_PWM = 1;
     BRUSHED_PWM = 2;
@@ -54,29 +54,21 @@ enum motorControlMethod {
     BRUSHED_BINARY = 3;
 }
 
-enum telemMethod {
+enum TelemMethod {
     NO_TELEMETRY = 0;
     BIDIRECTIONAL_DSHOT = 1;
     SERIAL = 2;
-    // Is this specific enough or to generic?
+    // Is this specific enough or too generic?
     TACHOMETER = 3;
 }
 
 // The various dshot modes may not be supported by all escs
 // Selecting DSHOT_OFF when config specifies DSHOT will throw an error
 // Conversely, values selected here when a non Dshot control method is selected will be ignored
-enum dshotModes {
+enum DshotModes {
     DSHOT_OFF = 0;
     DSHOT_150 = 1;
     DSHOT_300 = 2;
     DSHOT_600 = 3;
     DSHOT_1200 = 4;
-}
-
-enum FlywheelControlInputType {
-    FLYWHEEL_UNSPECIFIED = 0;
-    FLYWHEEL_RPM = 1;
-    // Maybe we don't have exact rpm data, but we've got a simple controller that gives us a ready signal at a set rpm
-    //  that it keeps track of internally?
-    FLYWHEEL_READY = 2;
 }

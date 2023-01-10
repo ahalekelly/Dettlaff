@@ -4,7 +4,7 @@ syntax = "proto3";
 /******** Main messages that will be sent ********/
 /*************************************************/
 
-message controlConfig {
+message ControlConfig {
     // The main firing trigger that requests a dart out the barrel, ASAP
     int32 triggerSwitchPin = 1;
     SwitchOrientation TriggerSwitchOrientation = 2;
@@ -13,14 +13,42 @@ message controlConfig {
     SwitchOrientation optRevSwitchOrientation = 4;
     // Which button is this?
     int32 buttonPin = 5;
+    int32 fireModeCycleButtonPin = 6;
     // This is internally routed on Detlaff; you probably don't want to touch it
     // Is there any reason a user should want to touch this?
-    int32 batteryAdcPin = 6;
+    int32 batteryAdcPin = 7;
+}
+
+message ControlParams {
+    // For the moment, we'll just cycle through these with the button in the config array
+    // We'll revisit this in the future to hopefully support things like potentiometers and displays
+    repeated FireModeEntry fireModesArray = 1;
+    // Lets the user switch firing modes over ble.
+    // It may or may not update live
+    int32 currentFiringMode = 2;
 }
 
 /*************************************************/
 /************** Enums and sub-types **************/
 /*************************************************/
+
+message FireModeEntry {
+    // FPS? RPM? Percent of Max? Which units work best
+    int32 fps = 1;
+    int32 burstLength = 2;
+    PusherBurstType type = 3;
+}
+
+enum PusherBurstType {
+    // The pusher will stop as soon as the current cycle completes, even if it's short of the burst count
+    PUSHER_BURST_STOP = 0;
+    // The pusher will stop after it has fired the current n-dart burst
+    PUSHER_BURST_COMPLETE = 1;
+    // The pusher will count the number of times the trigger has been released and fire that many bursts
+
+    // or is _QUEUE a better descriptor of what this is?
+    PUSHER_BURST_COUNT = 2;
+}
 
 enum SwitchOrientation {
     SWITCH_NORMALLY_OPEN = 0;

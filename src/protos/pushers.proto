@@ -7,29 +7,29 @@ syntax = "proto3";
 // Configuration details that may or may not require a reboot to implement
 message PusherConfig {
     PusherType type = 1;
-    int32 ExtendPin = 2;
-    bool CanBrake = 3;
+    int32 extendPin = 2;
+    bool canBrake = 3;
     // Can be skipped if CanBrake == false
-    int32 BrakePin = 4;
+    int32 brakePin = 4;
     // This input can be used for cycle control switches; it's also acceptable to have no control inputs
-    repeated PusherControlInput ControlInputs = 5;
+    repeated PusherControlInput controlInputs = 5;
 
     oneof PusherTimings{
-        MotorTimings MotorTiming = 6;
-        SolenoidTimings SolenoidTiming = 7;
+        MotorTimings motorTiming = 6;
+        SolenoidTimings solenoidTiming = 7;
     }
 }
 
 // Parameters that can be changed on the fly without needing a reboot
 message PusherParams {
-    int32 RateOfFire = 1;
+    int32 rateOfFire = 1;
     // A repeating list of burst lengths will let users configure any number and order of firing patterns that they'd
     //  like (within reason; we'll probably need to cap the list at something reasonable).
     // A burst length of 0 is safe, 1 is semi-auto, 255 is full auto, and anything in between is a valid (if silly)
     //  burst length
     // The user could then cycle between the burst lengths with a button, rotaty dial, etc that the user defines in the
     //  controls proto
-    repeated PusherBurstEntry BurstEntries = 2;
+    repeated PusherBurstEntry burstEntries = 2;
 }
 
 /*************************************************/
@@ -56,22 +56,6 @@ enum PusherControlInputType {
     // This may need more than 1 pin, or some sort of enum for how it's controlled, this would probaby be fine if we
     //  just need an i2c address or something
     PUSHER_POSITION = 3;
-}
-
-message PusherBurstEntry {
-    int32 Length = 1;
-    PusherBurstType Type = 2;
-}
-
-enum PusherBurstType {
-    // The pusher will stop as soon as the current cycle completes, even if it's short of the burst count
-    PUSHER_BURST_STOP = 0;
-    // The pusher will stop after it has fired the current n-dart burst
-    PUSHER_BURST_COMPLETE = 1;
-    // The pusher will count the number of times the trigger has been released and fire that many bursts
-
-    // or is _QUEUE a better descriptor of what this is?
-    PUSHER_BURST_COUNT = 2;
 }
 
 message MotorTimings {

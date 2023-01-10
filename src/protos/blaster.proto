@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+// One message to encapuslate all the configuration and parameters of the blaster
+message Blaster {
+    String blasterName = 1;
+
+    ControlConfig controlconfig = 1;
+    ControlParams controlParams = 2;
+
+    FlywheelConfig flywheelConfig = 3;
+    oneof flywheelParams {
+        ClosedLoopFlywheelParams closedLoopFlywheelParams = 4;
+        OpenLoopFlywheelParams openLoopFlywheelParams = 5;
+    }
+
+    PusherConfig pusherConfig = 6;
+    PusherParams pusherParams = 7;
+}
