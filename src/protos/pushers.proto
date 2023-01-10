@@ -20,18 +20,6 @@ message PusherConfig {
     }
 }
 
-// Parameters that can be changed on the fly without needing a reboot
-message PusherParams {
-    int32 rateOfFire = 1;
-    // A repeating list of burst lengths will let users configure any number and order of firing patterns that they'd
-    //  like (within reason; we'll probably need to cap the list at something reasonable).
-    // A burst length of 0 is safe, 1 is semi-auto, 255 is full auto, and anything in between is a valid (if silly)
-    //  burst length
-    // The user could then cycle between the burst lengths with a button, rotaty dial, etc that the user defines in the
-    //  controls proto
-    repeated PusherBurstEntry burstEntries = 2;
-}
-
 /*************************************************/
 /************** Enums and sub-types **************/
 /*************************************************/

@@ -14,5 +14,5 @@ message Blaster {
     }
 
     PusherConfig pusherConfig = 6;
-    PusherParams pusherParams = 7;
+    // Pusher parameters live in the ControlParams message because they are tied to fps too
 }

@@ -20,8 +20,12 @@ message ControlConfig {
 }
 
 message ControlParams {
-    // For the moment, we'll just cycle through these with the button in the config array
-    // We'll revisit this in the future to hopefully support things like potentiometers and displays
+    // A repeating list of burst lengths and fps will let users configure any number and order of firing patterns that
+    //  they'd like (within reason; we'll probably need to cap the list at something reasonable).
+    // A burst length of 0 is safe, 1 is semi-auto, 255 is full auto, and anything in between is a valid (if silly)
+    //  burst length
+    // The user could then cycle between the burst lengths with a button, rotaty dial, etc that the user defines in the
+    //  controls proto
     repeated FireModeEntry fireModesArray = 1;
     // Lets the user switch firing modes over ble.
     // It may or may not update live
