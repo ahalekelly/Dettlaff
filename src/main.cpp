@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
-#define BOUNCE_LOCK_OUT // improves rev responsiveness at the risk of spurious signals from noise
+#define BOUNCE_LOCK_OUT // improves trigger responsiveness at the risk of spurious signals from noise
 #include "Bounce2.h"
 #include "DShotRMT.h"
 #include "ESP32Servo.h"
@@ -12,19 +12,20 @@
 char wifiSsid[32] = "ssid";
 char wifiPass[63] = "pass";
 uint8_t numMotors = 2; // 2 for single-stage, 4 for dual-stage
-uint32_t revRPM[4] = {50000, 50000, 50000, 50000};
+uint32_t revRPM[4] = {50000, 50000, 50000, 50000}; // adjust this to change fps - note that these numbers currently assume you have a 4S battery! will fix soon
 uint32_t idleRPM[4] = {1000, 1000, 1000, 1000};
-uint32_t idleTime_ms = 30000; // how long to idle the flywheels for
+uint32_t idleTime_ms = 30000; // how long to idle the flywheels for after releasing the trigger, in milliseconds
 uint32_t motorKv = 2550;
-pins_t pins = pins_v0_4_noid;
+pins_t pins = pins_v0_4_noid; // select the one that matches your board revision and pusher type
 // Options:
+// _noid means use the flywheel output to drive a solenoid pusher
+// _n20 for a pusher motor on the pusher output
 // pins_v0_4_n20
 // pins_v0_4_noid
 // pins_v0_3_n20
 // pins_v0_3_noid
 // pins_v0_2
 // pins_v0_1
-// _noid means use the flywheel output to drive a solenoid pusher
 pusherType_t pusherType = PUSHER_SOLENOID_OPENLOOP;
 // PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
 uint16_t burstLength = 3;
@@ -36,8 +37,6 @@ uint8_t bufferMode = 1;
 uint16_t firingDelay_ms = 200; // delay to allow flywheels to spin up before pushing dart
 uint16_t solenoidExtendTime_ms = 22;
 uint16_t solenoidRetractTime_ms = 78;
-uint32_t firingRPM[4] = {revRPM[0]*9/10, revRPM[1]*9/10,
-                         revRPM[2]*9/10, revRPM[3]*9/10};
 
 // Advanced Configuration Variables
 
@@ -51,7 +50,8 @@ char AP_SSID[32] = "Dettlaff";
 char AP_PW[32] = "KellyIndu";
 dshot_mode_t dshotMode =  DSHOT300; // DSHOT_OFF to fall back to servo PWM
 uint16_t targetLoopTime_us = 1000; // microseconds
-
+uint32_t firingRPM[4] = {revRPM[0]*9/10, revRPM[1]*9/10, // for closed loop flywheel mode only - not implemented yet
+                         revRPM[2]*9/10, revRPM[3]*9/10};
 
 // End Configuration Variables
 
