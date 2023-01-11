@@ -24,8 +24,9 @@ Dettlaff should enter upload mode automatically, but if it doesn't, the button o
 4. Hit Upload within a few minutes of power cycling
 
 ## Wiring
-* Look up in boards_config.h which pins to use for your version of Dettlaff
+* Look up in boards_config.h which pins to use for your version of Dettlaff (on v0.3 the rev switch pin is marked REV instead of the pin number)
 * Connect each switch between the numbered pin (yellow wire) and the - pin (black wire) on each connector
 * Before plugging in your ESC, double check that all the pins on the ESC output match the pins on the ESC! **ESC connectors are not standardized and you can fry your Dettlaff!**
 * For use with a pusher motor, solder the motor to the pusher output, and the ESC power to the flywheel output
 * To use v0.3 or v0.4 with a solenoid, solder the solenoid to the flywheel output
+* If you have a power switch, solder it between the - pin and the SHDN (shutdown) pin
