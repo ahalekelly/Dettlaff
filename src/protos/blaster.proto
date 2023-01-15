@@ -1,18 +1,24 @@
 syntax = "proto3";
 
+import "controls.proto";
+import "flywheels.proto";
+import "pushers.proto";
+
+package BLASTER;
+
 // One message to encapuslate all the configuration and parameters of the blaster
 message Blaster {
-    String blasterName = 1;
+    string blasterName = 1;
 
-    ControlConfig controlconfig = 1;
-    ControlParams controlParams = 2;
+    ControlConfig controlconfig = 2;
+    ControlParams controlParams = 3;
 
-    FlywheelConfig flywheelConfig = 3;
+    FlywheelConfig flywheelConfig = 4;
     oneof flywheelParams {
-        ClosedLoopFlywheelParams closedLoopFlywheelParams = 4;
-        OpenLoopFlywheelParams openLoopFlywheelParams = 5;
+        ClosedLoopFlywheelParams closedLoopFlywheelParams = 5;
+        OpenLoopFlywheelParams openLoopFlywheelParams = 6;
     }
 
-    PusherConfig pusherConfig = 6;
+    PusherConfig pusherConfig = 7;
     // Pusher parameters live in the ControlParams message because they are tied to fps too
 }
