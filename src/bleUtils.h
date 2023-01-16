@@ -14,6 +14,9 @@
 #include <Stream.h>
 #include <SimpleSerialShell.h>
 // clang-format on
+
+#include "protos/protoUtils.h"
+
 extern SimpleSerialShell& shell;
 
 int shellCommandBattLevel(int argc, char** argv);
@@ -50,17 +53,11 @@ public:
 class MyCallbacks : public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic* pCharacteristic)
     {
-        std::string value = pCharacteristic->getValue();
-        shell.printf("Got updated value %s\n", value);
+        shell.printf("Got updated value %s\n", pCharacteristic->getValue());
 
-        if (value.length() > 0) {
-            int newVal = atoi(value.c_str());
+        Blaster received = Blaster_init_zero;
 
-            if (newVal >= 0) {
-                shell.printf("Updating solenoid extend time to %d\n", newVal);
-                solenoidExtendTime_ms = newVal;
-            }
-        }
+        ProtoDecodeFromString(&received, pCharacteristic->getValue());
     }
 };
 

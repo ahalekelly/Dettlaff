@@ -19,6 +19,8 @@
 
 #include "bleUtils.h"
 
+#include "protos/protoUtils.h"
+
 // Configuration Variables
 
 char wifiSsid[32] = "ssid";
@@ -120,6 +122,10 @@ void setup()
                                                       // can we find a way around using a pin for this?
 
     shell.attach(Serial);
+    TestProtos();
+
+    Serial.println("Proto tests completed successfully");
+
     shell.addCommand(F("solenoid"), shellCommandSolenoid);
     shell.addCommand(F("battery"), shellCommandBattLevel);
 
@@ -185,7 +191,7 @@ void loop()
     // packets to know when a packet is complete? Need to test and see
 
     // debug
-    Serial.println(telemBuffer);
+    // Serial.println(telemBuffer);
 
     if (triggerSwitch.pressed()) { // pressed and released are transitions, isPressed is for state
         if (bufferMode == 0) {
