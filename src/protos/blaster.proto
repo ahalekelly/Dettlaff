@@ -1,10 +1,10 @@
 syntax = "proto3";
 
+import "nanopb.proto";
+
 import "controls.proto";
 import "flywheels.proto";
 import "pushers.proto";
-
-package BLASTER;
 
 /*************************************************/
 /******** Main messages that will be sent ********/
@@ -13,7 +13,7 @@ package BLASTER;
 // One message to encapuslate all the configuration and parameters of the blaster
 message Blaster
 {
-    string blasterName = 1;
+    string blasterName = 1 [ (nanopb).max_size = 20 ];
 
     ControlConfig controlconfig = 2;
     ControlParams controlParams = 3;
