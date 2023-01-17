@@ -33,8 +33,7 @@ message ControlParams {
 /*************************************************/
 
 message FireModeEntry {
-    // FPS? RPM? Percent of Max? Which units work best
-    int32 fps = 1;
+    int32 rpm = 1;
     int32 burstLength = 2;
     PusherBurstType type = 3;
 }
