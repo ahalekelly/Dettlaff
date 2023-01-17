@@ -6,6 +6,10 @@ import "pushers.proto";
 
 package BLASTER;
 
+/*************************************************/
+/******** Main messages that will be sent ********/
+/*************************************************/
+
 // One message to encapuslate all the configuration and parameters of the blaster
 message Blaster {
     string blasterName = 1;
@@ -21,4 +25,18 @@ message Blaster {
 
     PusherConfig pusherConfig = 7;
     // Pusher parameters live in the ControlParams message because they are tied to fps too
+
+    // This is only provided by the board to inform the configurator; it will error if changed
+    HardwareVersion hardwareVersion = 8;
 }
+
+/*************************************************/
+/************** Enums and sub-types **************/
+/*************************************************/
+enum HardwareVersion {
+    VERSION_0P1 = 0,
+    VERSION_0P2 = 1,
+    VERSION_0P3 = 2,
+    VERSION_0P4 = 3,
+}
+
