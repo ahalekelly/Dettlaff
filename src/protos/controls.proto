@@ -12,11 +12,7 @@ message ControlConfig {
     int32 optRevSwitchPin = 3;
     SwitchOrientation optRevSwitchOrientation = 4;
     // Which button is this?
-    int32 buttonPin = 5;
-    int32 fireModeCycleButtonPin = 6;
-    // This is internally routed on Detlaff; you probably don't want to touch it
-    // Is there any reason a user should want to touch this?
-    int32 batteryAdcPin = 7;
+    int32 fireModeCycleButtonPin = 5;
 }
 
 message ControlParams {

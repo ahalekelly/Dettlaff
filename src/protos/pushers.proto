@@ -33,17 +33,17 @@ enum PusherType {
 }
 
 message PusherControlInput {
-    PusherControlInputType Type = 1;
-    int32 DataPin = 2;
+    PusherControlInputType type = 1;
+    int32 dataPin = 2;
 }
 
 enum PusherControlInputType {
-    PUSHER_UNSPECIFIED = 0;
-    PUSHER_REARMOST = 1;
-    PUSHER_FOREMOST = 2;
+    // There's no null value here because the whole enum is optional; if we don't need one, we just won't include it
+    PUSHER_REARMOST = 0;
+    PUSHER_FOREMOST = 1;
     // This may need more than 1 pin, or some sort of enum for how it's controlled, this would probaby be fine if we
     //  just need an i2c address or something
-    PUSHER_POSITION = 3;
+    PUSHER_POSITION = 2;
 }
 
 message MotorTimings {
@@ -59,9 +59,9 @@ message SolenoidTimings {
     // If we have a foremost control intput and we don't see it trigger in this time, we have a jam and will attempt
     //  to fix or alert the user
     // Is there any case (like single fire or firemode 1) where we'd want the pusher to stay extended while the user holds down the trigger?
-    int32 maxExtendTime = 1;
+    int32 extendTime = 1;
     // The minium amount of time the plunger must be retracting before the system can fire again
     // If we have a rearmost control input and we don't see it trigger in this time, we have a jam and will attempt
     //  to fix or alert the user
-    int32 minRetractTime = 2;
+    int32 retractTime = 2;
 }

@@ -10,9 +10,12 @@ message FlywheelConfig {
     repeated int32 controlPins = 3;
     TelemMethod telemetryMethod = 4;
     // Both no telemetry and bidirectional Dshot will not have any telemetry pins
-    // Serial and tachometer will likely only have one pin, but we could support having them communicate on multiple pins
+    // Serial and tachometer will likely only have one pin, but we can support having them communicate on multiple pins
     repeated int32 telemPins = 5;
     int32 motorKv = 6;
+    // A pin that allows us to shut off power to the esc to save power. This may not exist if we're using the flywheel
+    control FET to control a high current pusher
+    int32 flywheelPowerPin = 7;
 }
 
 message ClosedLoopFlywheelParams {
@@ -20,26 +23,26 @@ message ClosedLoopFlywheelParams {
     int32 idleRpm = 2;
     int32 idleTime_ms = 4;
 
-    // Should this be rpm? Percent of rev rpm?
-    int32 firingThresholdRpm = 5;
-
-    // Can we get some sort of unit on this?
-    int32 spindownSpeed = 6;
+    // TODO(Issue #21) Figure out and docment the spindown logic
+    int32 spindownSpeed = 5;
 }
 
 message OpenLoopFlywheelParams {
-    int32 revDutyCycle = 1;
-    int32 idleDutyCycle = 2;
+    int32 revRpm = 1;
+    int32 idleRpm = 2;
     int32 idleTime_ms = 3;
 
-    // The minimum amount of time that the flywheels must have revved before the pusher can be triggered
+    // The minimum amount of time that the flywheels must have revved from standstill before the pusher can be triggered
     int32 minimumRevTime_ms = 4;
-    // The minimum amount of time that allows the flywheels to spin back up after firing a dart
-    int32 delayBetweenDarts_ms = 5;
+    // The minimum amount of time that the flywheels must have revved from idling before the pusher can be triggered
+    // This is optional; if idling is not used, we will fall back to minimumRevTime_ms
+    int32 minimumIdleRevTime_ms = 5;
+    // The minimum amount of time needed to allow the flywheels to spin back up after firing a dart
+    int32 delayBetweenDarts_ms = 6;
 
     // Does not apply to binary brushed setups since we have no way to control the speed
     // Can we get some sort of unit on this?
-    int32 spindownSpeed = 6;
+    int32 spindownSpeed = 7;
 }
 
 /*************************************************/
