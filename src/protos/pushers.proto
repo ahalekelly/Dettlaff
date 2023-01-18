@@ -7,16 +7,12 @@ syntax = "proto3";
 // Configuration details that may or may not require a reboot to implement
 message PusherConfig {
     PusherType type = 1;
-    int32 extendPin = 2;
-    bool canBrake = 3;
-    // Can be skipped if CanBrake == false
-    int32 brakePin = 4;
     // This input can be used for cycle control switches; it's also acceptable to have no control inputs
-    repeated PusherControlInput controlInputs = 5;
+    repeated PusherControlInput controlInputs = 2;
 
     oneof PusherTimings{
-        MotorTimings motorTiming = 6;
-        SolenoidTimings solenoidTiming = 7;
+        MotorTimings motorTiming = 3;
+        SolenoidTimings solenoidTiming = 4;
     }
 }
 

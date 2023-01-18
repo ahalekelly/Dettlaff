@@ -10,8 +10,7 @@ message FlywheelConfig {
     TelemMethod telemetryMethod = 3;
     // A pin that allows us to shut off power to the esc to save power. This may not exist if we're using the flywheel
     // control FET to control a high current pusher
-    int32 flywheelPowerPin = 4;
-    repeated MotorConfig = 5;
+    repeated MotorConfig = 4;
 }
 
 message ClosedLoopFlywheelParams {
@@ -72,17 +71,9 @@ enum DshotModes {
     DSHOT_1200 = 4;
 }
 
-// There is an optional telemetry pin whose functionality will be determined by the TelemMethod enum in the surrounding
-//  FlywheelConfig message
-// That one telemetry type will apply to all motors, and if one motor has a telemetry pin set, all motors must have it
-//  set, even if they all share the same pin
 message MotorConfig {
-    int32 controlPins = 1;
-    // Both no telemetry and bidirectional Dshot will not have any telemetry pins
-    // Serial and tachometer will likely only have one pin, but we can support having them communicate on multiple pins
-    int32 telemPins = 2;
-    int32 motorKv = 3;
-    int32 revRPM = 4;
-    int32 idleRPM = 5;
-    int32 firingThresholdRpm = 6;
+    int32 motorKv = 1;
+    int32 revRPM = 2;
+    int32 idleRPM = 3;
+    int32 firingThresholdRpm = 4;
 }
