@@ -14,6 +14,8 @@ message PusherConfig {
         MotorTimings motorTiming = 3;
         SolenoidTimings solenoidTiming = 4;
     }
+    int32 pusherVoltage_mv = 5;
+    bool pusherDirectionReverse = 6;
 }
 
 /*************************************************/
