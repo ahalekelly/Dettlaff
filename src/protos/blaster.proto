@@ -11,14 +11,16 @@ package BLASTER;
 /*************************************************/
 
 // One message to encapuslate all the configuration and parameters of the blaster
-message Blaster {
+message Blaster
+{
     string blasterName = 1;
 
     ControlConfig controlconfig = 2;
     ControlParams controlParams = 3;
 
     FlywheelConfig flywheelConfig = 4;
-    oneof flywheelParams {
+    oneof flywheelParams
+    {
         ClosedLoopFlywheelParams closedLoopFlywheelParams = 5;
         OpenLoopFlywheelParams openLoopFlywheelParams = 6;
     }
@@ -39,4 +41,3 @@ enum HardwareVersion {
     VERSION_0P3 = 2,
     VERSION_0P4 = 3,
 }
-
