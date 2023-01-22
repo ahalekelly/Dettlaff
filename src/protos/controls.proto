@@ -4,7 +4,8 @@ syntax = "proto3";
 /******** Main messages that will be sent ********/
 /*************************************************/
 
-message ControlConfig {
+message ControlConfig
+{
     // The main firing trigger that requests a dart out the barrel, ASAP
     int32 triggerSwitchPin = 1;
     SwitchOrientation TriggerSwitchOrientation = 2;
@@ -15,7 +16,8 @@ message ControlConfig {
     int32 fireModeCycleButtonPin = 5;
 }
 
-message ControlParams {
+message ControlParams
+{
     // A repeating list of burst lengths and fps will let users configure any number and order of firing patterns that
     //  they'd like (within reason; we'll probably need to cap the list at something reasonable).
     // A burst length of 0 is safe, 1 is semi-auto, 255 is full auto, and anything in between is a valid (if silly)
@@ -32,7 +34,8 @@ message ControlParams {
 /************** Enums and sub-types **************/
 /*************************************************/
 
-message FireModeEntry {
+message FireModeEntry
+{
     int32 rpm = 1;
     int32 burstLength = 2;
     PusherBurstType type = 3;

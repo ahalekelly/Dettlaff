@@ -3,9 +3,9 @@
 #include <Arduino.h>
 
 enum flywheelState_t {
-  STATE_IDLE,
-  STATE_ACCELERATING, // ACCELERATING = wheels not yet at full speed
-  STATE_FULLSPEED, // REV = wheels at full speed
+    STATE_IDLE,
+    STATE_ACCELERATING, // ACCELERATING = wheels not yet at full speed
+    STATE_FULLSPEED, // REV = wheels at full speed
 };
 
 enum pusherType_t {
