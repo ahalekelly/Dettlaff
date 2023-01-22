@@ -4,7 +4,8 @@ syntax = "proto3";
 /******** Main messages that will be sent ********/
 /*************************************************/
 
-message FlywheelConfig {
+message FlywheelConfig
+{
     MotorControlMethod controlMethod = 1;
     DshotModes dshotMode = 2;
     TelemMethod telemetryMethod = 3;
@@ -13,7 +14,8 @@ message FlywheelConfig {
     repeated MotorConfig = 4;
 }
 
-message ClosedLoopFlywheelParams {
+message ClosedLoopFlywheelParams
+{
     int32 revRpm = 1;
     int32 idleRpm = 2;
     int32 idleTime_ms = 4;
@@ -22,7 +24,8 @@ message ClosedLoopFlywheelParams {
     int32 spindownSpeed = 5;
 }
 
-message OpenLoopFlywheelParams {
+message OpenLoopFlywheelParams
+{
     int32 revRpm = 1;
     int32 idleRpm = 2;
     int32 idleTime_ms = 3;
@@ -69,7 +72,8 @@ enum DshotModes {
     DSHOT_1200 = 4;
 }
 
-message MotorConfig {
+message MotorConfig
+{
     int32 motorKv = 1;
     int32 revRPM = 2;
     int32 idleRPM = 3;
