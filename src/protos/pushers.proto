@@ -39,12 +39,12 @@ message PusherControlInput
 }
 
 enum PusherControlInputType {
-    // There's no null value here because the whole enum is optional; if we don't need one, we just won't include it
-    PUSHER_REARMOST = 0;
-    PUSHER_FOREMOST = 1;
+    PUSHER_CONTROL_INVALID = 0;
+    PUSHER_REARMOST = 1;
+    PUSHER_FOREMOST = 2;
     // This may need more than 1 pin, or some sort of enum for how it's controlled, this would probaby be fine if we
     //  just need an i2c address or something
-    PUSHER_POSITION = 2;
+    PUSHER_POSITION = 3;
 }
 
 message MotorTimings
