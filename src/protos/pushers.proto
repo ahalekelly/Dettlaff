@@ -25,11 +25,11 @@ message PusherConfig
 /*************************************************/
 
 enum PusherType {
-    PUSHER_MOTOR_CLOSEDLOOP = 0;
-    PUSHER_SOLENOID_CLOSEDLOOP = 1;
-    // Do we want to support open loop motor pushers?
-    PUSHER_MOTOR_OPENLOOP = 2;
-    PUSHER_SOLENOID_OPENLOOP = 3;
+    PUSHER_TYPE_INVALID = 0;
+    PUSHER_MOTOR_CLOSEDLOOP = 1;
+    PUSHER_SOLENOID_CLOSEDLOOP = 2;
+    PUSHER_MOTOR_OPENLOOP = 3;
+    PUSHER_SOLENOID_OPENLOOP = 4;
 }
 
 message PusherControlInput

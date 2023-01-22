@@ -42,17 +42,19 @@ message FireModeEntry
 }
 
 enum PusherBurstType {
+    PUSHER_BURST_INVALID = 0;
     // The pusher will stop as soon as the current cycle completes, even if it's short of the burst count
-    PUSHER_BURST_STOP = 0;
+    PUSHER_BURST_STOP = 1;
     // The pusher will stop after it has fired the current n-dart burst
-    PUSHER_BURST_COMPLETE = 1;
+    PUSHER_BURST_COMPLETE = 2;
     // The pusher will count the number of times the trigger has been released and fire that many bursts
 
     // or is _QUEUE a better descriptor of what this is?
-    PUSHER_BURST_COUNT = 2;
+    PUSHER_BURST_COUNT = 3;
 }
 
 enum SwitchOrientation {
-    SWITCH_NORMALLY_OPEN = 0;
-    SWITCH_NORMALLY_CLOSED = 1;
+    SWITCH_ORIENTATION_INVALID = 0;
+    SWITCH_NORMALLY_OPEN = 1;
+    SWITCH_NORMALLY_CLOSED = 2;
 }
