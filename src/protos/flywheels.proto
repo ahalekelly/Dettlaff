@@ -11,7 +11,7 @@ message FlywheelConfig
     TelemMethod telemetryMethod = 3;
     // A pin that allows us to shut off power to the esc to save power. This may not exist if we're using the flywheel
     // control FET to control a high current pusher
-    repeated MotorConfig = 4;
+    repeated MotorConfig motorConfig = 4;
 }
 
 message ClosedLoopFlywheelParams
