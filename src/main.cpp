@@ -279,7 +279,7 @@ void loop()
             servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
         }
     } else {
-        for (i = 0; i < numMotors; i++) {
+        for (int i = 0; i < numMotors; i++) {
             if (i == telemMotorNum) {
                 dshot[i].send_dshot_value(throttleValue[i] + 48,
                     ENABLE_TELEMETRIC); // is there a way to have dshot library only send one
