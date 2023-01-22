@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
-#define BOUNCE_LOCK_OUT // improves trigger responsiveness at the risk of spurious signals from noise
+#define BOUNCE_LOCK_OUT // improves switch responsiveness at the risk of spurious signals from noise
 #include "Bounce2.h"
 #include "DShotRMT.h"
 #include "ESP32Servo.h"
@@ -15,11 +15,14 @@
 char wifiSsid[32] = "ssid";
 char wifiPass[63] = "pass";
 uint8_t numMotors = 2; // 2 for single-stage, 4 for dual-stage
-uint32_t revRPM[4] = {
-    50000, 50000, 50000,
-    50000
-}; // adjust this to change fps - note that these numbers currently assume you have a 4S battery! will fix soon
-uint32_t idleRPM[4] = { 1000, 1000, 1000, 1000 };
+uint32_t revRPM[4] = { // adjust this to change fps - note that these numbers currently assume you have a 4S battery! will fix soon
+    50000, 50000,
+    50000, 50000
+}; 
+uint32_t idleRPM[4] = {
+    1000, 1000,
+    1000, 1000
+};
 uint32_t idleTime_ms = 30000; // how long to idle the flywheels for after releasing the trigger, in milliseconds
 uint32_t motorKv = 2550;
 pins_t pins = pins_v0_5; // select the one that matches your board revision and pusher type
@@ -162,8 +165,8 @@ void loop()
 
     // Transfer data from telemetry serial port to telemetry serial buffer:
     while (Serial2.available()) {
-        telemBuffer += Serial2.read(); // this doesn't seem to work - do we need 1k pullup resistor? also is this the
-                                       // most efficient way to do this?
+        telemBuffer += Serial2.read(); // this doesn't seem to work - do we need 1k pullup resistor?
+                                       // also is this the most efficient way to do this?
     }
     // Then parse serial buffer, if serial buffer contains complete packet then update motorRPM value, clear serial
     // buffer, and increment telemMotorNum to get the data for the next motor will we be able to detect the gaps between
@@ -205,8 +208,8 @@ void loop()
     case STATE_ACCELERATING:
         if (closedLoopFlywheels) {
             // If ALL motors are at target RPM update the blaster's state to FULLSPEED.
-            // in the future add predictive capacity for when they'll be up to speed in the future, taking into account
-            // pusher delay
+            // in the future add predictive capacity for when they'll be up to speed in the future,
+            // taking into account pusher delay
             if (motorRPM[0] > firingRPM[0] && (numMotors <= 1 || motorRPM[1] > firingRPM[1]) && (numMotors <= 2 || motorRPM[2] > firingRPM[2]) && (numMotors <= 3 || motorRPM[3] > firingRPM[3])) {
                 flywheelState = STATE_FULLSPEED;
             }
