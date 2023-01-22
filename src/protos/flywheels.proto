@@ -46,18 +46,17 @@ message OpenLoopFlywheelParams
 /*************************************************/
 
 enum MotorControlMethod {
-    ESC_DSHOT = 0;
-    ESC_PWM = 1;
-    BRUSHED_PWM = 2;
-    // Is binary the right word for something like a relay that's only on or off?
-    BRUSHED_BINARY = 3;
+    MOTOR_CONTROL_INVALID = 0;
+    ESC_DSHOT = 1;
+    ESC_PWM = 2;
+    BRUSHED_PWM = 3;
+    BRUSHED_BINARY = 4;
 }
 
 enum TelemMethod {
     NO_TELEMETRY = 0;
     BIDIRECTIONAL_DSHOT = 1;
     SERIAL = 2;
-    // Is this specific enough or too generic?
     TACHOMETER = 3;
 }
 

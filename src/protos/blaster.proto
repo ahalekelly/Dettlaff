@@ -36,8 +36,9 @@ message Blaster
 /************** Enums and sub-types **************/
 /*************************************************/
 enum HardwareVersion {
-    VERSION_0P1 = 0;
-    VERSION_0P2 = 1;
-    VERSION_0P3 = 2;
-    VERSION_0P4 = 3;
+    VERSION_INVALID = 0;
+    VERSION_0P1 = 1;
+    VERSION_0P2 = 2;
+    VERSION_0P3 = 3;
+    VERSION_0P4 = 4;
 }
