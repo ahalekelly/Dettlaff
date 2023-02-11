@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "nanopb.proto";
+
 /*************************************************/
 /******** Main messages that will be sent ********/
 /*************************************************/
@@ -11,7 +13,8 @@ message FlywheelConfig
     TelemMethod telemetryMethod = 3;
     // A pin that allows us to shut off power to the esc to save power. This may not exist if we're using the flywheel
     // control FET to control a high current pusher
-    repeated MotorConfig motorConfig = 4;
+    // We support a maximum of 4 motors; add that max to nanopb to simplify the implementation
+    repeated MotorConfig motorConfig = 4 [ (nanopb).max_count = 4 ];
 }
 
 message ClosedLoopFlywheelParams

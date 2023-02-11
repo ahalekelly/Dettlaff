@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "nanopb.proto";
+
 /*************************************************/
 /******** Main messages that will be sent ********/
 /*************************************************/
@@ -24,7 +26,8 @@ message ControlParams
     //  burst length
     // The user could then cycle between the burst lengths with a button, rotaty dial, etc that the user defines in the
     //  controls proto
-    repeated FireModeEntry fireModesArray = 1;
+    // NanoPb on Detlaff needs a maximum number of entries to simplify the implementation
+    repeated FireModeEntry fireModesArray = 1 [ (nanopb).max_count = 16 ];
     // Lets the user switch firing modes over ble.
     // It may or may not update live
     int32 currentFiringMode = 2;
