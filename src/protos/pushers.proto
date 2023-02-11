@@ -9,7 +9,8 @@ message PusherConfig
 {
     PusherType type = 1;
     // This input can be used for cycle control switches; it's also acceptable to have no control inputs
-    repeated PusherControlInput controlInputs = 2;
+    // NanoPb on Detlaff needs a maximum number of inputs to simplify the implementation
+    repeated PusherControlInput controlInputs = 2 [ (nanopb).max_count = 2 ];
 
     oneof PusherTimings
     {
