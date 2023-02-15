@@ -65,6 +65,16 @@ void ProtoDecodeFromString(Blaster* received, const std::string& input)
     PrettyPrintBlaster(shell, *received);
 }
 
+void PrettyPrintHardwareVersion(SimpleSerialShell& printer, Blaster& blaster)
+{
+    printer.printf("Detlaff Board Version: %s\n",
+        ((blaster.hardwareVersion == HardwareVersion_VERSION_0P1)          ? "0.1"
+                : (blaster.hardwareVersion == HardwareVersion_VERSION_0P2) ? "0.2"
+                : (blaster.hardwareVersion == HardwareVersion_VERSION_0P3) ? "0.3"
+                : (blaster.hardwareVersion == HardwareVersion_VERSION_0P4) ? "0.4"
+                                                                           : "Invalid"));
+}
+
 void PrettyPrintControlConfig(SimpleSerialShell& printer, Blaster& blaster)
 {
     if (blaster.has_controlconfig) {
@@ -193,6 +203,7 @@ void PrettyPrintFlywheelConfig(SimpleSerialShell& printer, Blaster& blaster)
 void PrettyPrintBlaster(SimpleSerialShell& printer, Blaster& blaster)
 {
     printer.printf("Name: %s\n", blaster.blasterName);
+    PrettyPrintHardwareVersion(printer, blaster);
 
     PrettyPrintControlConfig(printer, blaster);
     PrettyPrintControlParams(printer, blaster);
