@@ -1,26 +1,7 @@
 #include "protoUtils.h"
 
 #include "test.h"
-// #include <memory>
 
-// using namespace NanoPb::Converter;
-
-// class BlasterConverter : public MessageConverter<BlasterConverter, Blaster, BLASTER_Blaster, &BLASTER_Blaster_msg> {
-// public:
-//     static ProtoType encoderInit(const LocalType& local)
-//     {
-//         return ProtoType { .blasterName = StringConverter::encoderInit(local.blasterName) };
-//     }
-
-//     static ProtoType decoderInit(LocalType& local)
-//     {
-//         return ProtoType { .blasterName = StringConverter::decoderInit(local.blasterName) };
-//     }
-
-//     static bool decoderApply(const ProtoType& proto, LocalType& local) { return true; }
-// };
-
-// extern "C" {
 void TestProtos(void)
 {
     unsigned bufferLen = 128;
@@ -220,45 +201,3 @@ void ProtoEncodeToString(Blaster& received, std::string* output)
     // TL;DR: This may not work well as a proto-only helper function
     unsigned bufferLen = 512;
 }
-
-/* Attempt with NanoPB_cpp*/
-// void TestProtos(void)
-// {
-//     const Blaster test1({ "Detlaff" });
-
-//     NanoPb::StringOutputStream outputStream;
-
-//     assert(NanoPb::encode<BlasterConverter>(outputStream, test1));
-
-//     // auto inputStream = NanoPb::StringInputStream(outputStream.release());
-
-//     shell.printf("This should be here\n");
-//     std::string oString = *outputStream.release().get();
-//     shell.printf("Protobuf: %d, %s\n|0x", oString.length(), oString.c_str());
-//     for (int i = 0; i < oString.length(); i++) {
-//         shell.printf("%02x ", oString[i]);
-//     }
-//     shell.printf("|\n");
-//     // Blaster received;
-
-//     // assert(NanoPb::decode<BlasterConverter>(inputStream, received));
-
-//     // assert(test1.blasterName.compare(received.blasterName) == 0);
-
-//     std::string bleTest = "␇Detlaff";
-//     Blaster received;
-
-//     ProtoDecodeBleCharacteristic(&received, bleTest);
-//     assert(test1.blasterName.compare(received.blasterName) == 0);
-// }
-
-// void ProtoDecodeBleCharacteristic(Blaster* received, std::string characteristicContents)
-// {
-//     // pb_ostream_t bleOStream = pb_ostream_from_buffer((pb_byte_t*)characteristicContents.c_str(), characteristicContents.length());
-//     auto input = new NanoPb::BufferPtr(characteristicContents);
-//     auto bleStream = NanoPb::StringInputStream(input);
-
-//     NanoPb::decode<BlasterConverter>(bleStream, *received);
-
-//     shell.printf("Received blaster with name: %s\n", received->blasterName.c_str());
-// }
