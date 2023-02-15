@@ -15,16 +15,8 @@
 #include <SimpleSerialShell.h>
 // clang-format on
 extern SimpleSerialShell& shell;
-// extern "C" {
+
 void TestProtos(void);
-
-// struct Blaster {
-//     std::string blasterName;
-
-//     Blaster() = default;
-//     Blaster(const Blaster&) = delete;
-//     Blaster(Blaster&&) = default;
-// };
 
 void ProtoDecodeFromString(Blaster* received, const std::string& input);
 void PrettyPrintBlaster(SimpleSerialShell& printer, Blaster& blaster);
