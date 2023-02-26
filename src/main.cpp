@@ -6,6 +6,9 @@
 #include "ESP32Servo.h"
 #include "types.h"
 #include "boards_config.cpp"
+#include "fetDriver.h"
+#include "at8870Driver.h"
+#include "hBridgeDriver.h"
 
 // Configuration Variables
 
@@ -16,7 +19,7 @@ uint32_t revRPM[4] = {50000, 50000, 50000, 50000}; // adjust this to change fps 
 uint32_t idleRPM[4] = {1000, 1000, 1000, 1000};
 uint32_t idleTime_ms = 30000; // how long to idle the flywheels for after releasing the trigger, in milliseconds
 uint32_t motorKv = 2550;
-pins_t pins = pins_v0_4_noid; // select the one that matches your board revision and pusher type
+pins_t pins = pins_v0_5; // select the one that matches your board revision and pusher type
 // Options:
 // _noid means use the flywheel output to drive a solenoid pusher
 // _n20 for a pusher motor on the pusher output
@@ -35,8 +38,9 @@ uint8_t bufferMode = 1;
 // 2 = fire as many bursts as trigger pulls
 // for full auto, set burstLength high (50+) and bufferMode = 0
 uint16_t firingDelay_ms = 200; // delay to allow flywheels to spin up before pushing dart
-uint16_t solenoidExtendTime_ms = 22;
-uint16_t solenoidRetractTime_ms = 78;
+uint16_t solenoidExtendTime_ms = 20;
+uint16_t solenoidRetractTime_ms = 35;
+bool pusherReverseDirection = false;
 
 // Advanced Configuration Variables
 
@@ -84,6 +88,8 @@ DShotRMT dshot[4] = {DShotRMT(pins.esc1, RMT_CHANNEL_1), DShotRMT(pins.esc2, RMT
 
 void WiFiInit();
 
+Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 99, 20000, 5);
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting");
@@ -92,6 +98,15 @@ void setup() {
     digitalWrite(pins.flywheel, HIGH);
   }
   WiFiInit();
+  /*
+  if (pins.pusherDriverType == HBRIDGE_DRIVER) {
+    Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 99, 20000, 5);
+  } else if (pins.pusherDriverType == AT8870_DRIVER) {
+    At8870 pusher = At8870(pins.pusher1L, pins.pusher2L, 20000);
+  } else if (pins.pusherDriverType == FET_DRIVER) {
+    Fet pusher = Fet(pins.pusher1H);
+  }
+  */
   if (pins.revSwitch) {
     revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
     revSwitch.interval(debounceTime);
@@ -106,12 +121,6 @@ void setup() {
     cycleSwitch.attach(pins.cycleSwitch, INPUT_PULLUP);
     cycleSwitch.interval(debounceTime);
     cycleSwitch.setPressedState(cycleSwitchNormallyClosed);
-  }
-  if (pins.pusher) {
-    pinMode(pins.pusher, OUTPUT);
-    digitalWrite(pins.pusher, LOW);
-    pinMode(pins.pusherBrake, OUTPUT);
-    digitalWrite(pins.pusherBrake, LOW);
   }
 
   if (dshotMode == DSHOT_OFF) {
@@ -198,20 +207,17 @@ void loop() {
           case PUSHER_MOTOR_CLOSEDLOOP:
             cycleSwitch.update();
             if (shotsToFire > 0 && !firing) { // start pusher stroke
-              digitalWrite(pins.pusher, HIGH);
-              digitalWrite(pins.pusherBrake, LOW);
+              pusher.drive(100, pusherReverseDirection);
               firing = true;
               pusherTimer_ms = time_ms;
             } else if (firing && shotsToFire == 0 && cycleSwitch.pressed()) { // brake pusher
-              digitalWrite(pins.pusher, HIGH);
-              digitalWrite(pins.pusherBrake, HIGH);
+              pusher.brake();
               firing = false;
             } else if (firing && shotsToFire > 0 && cycleSwitch.released()) {
               shotsToFire = shotsToFire-1;
               pusherTimer_ms = time_ms;
             } else if (firing && time_ms > pusherTimer_ms + pusherStallTime_ms) { // stall protection
-              digitalWrite(pins.pusher, LOW); // let pusher coast
-              digitalWrite(pins.pusherBrake, LOW);
+              pusher.coast();
               shotsToFire = 0;
               firing = false;
               Serial.println("Pusher motor stalled!");
@@ -220,13 +226,13 @@ void loop() {
 
           case PUSHER_SOLENOID_OPENLOOP:
             if (shotsToFire > 0 && !firing && time_ms > pusherTimer_ms + solenoidRetractTime_ms) { // extend solenoid
-              digitalWrite(pins.pusher, HIGH);
+              pusher.drive(100, pusherReverseDirection);
               firing = true;
               shotsToFire -= 1;
               pusherTimer_ms = time_ms;
               Serial.println("solenoid extending");
             } else if (firing && time_ms > pusherTimer_ms + solenoidExtendTime_ms) { // retract solenoid
-              digitalWrite(pins.pusher, LOW);
+              pusher.coast();
               firing = false;
               pusherTimer_ms = time_ms;
               Serial.println("solenoid retracting");
@@ -238,7 +244,7 @@ void loop() {
   }
 
   if (closedLoopFlywheels) {
-    // --ray-- Andrew's control code goes here
+    // PID control code goes here
   } else { // open loop case
     for (int i = 0; i < numMotors; i++) {
       if (throttleValue[i] == 0) {
