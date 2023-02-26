@@ -88,7 +88,7 @@ DShotRMT dshot[4] = {DShotRMT(pins.esc1, RMT_CHANNEL_1), DShotRMT(pins.esc2, RMT
 
 void WiFiInit();
 
-Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 99, 20000, 5);
+Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 99, 20000, 10);
 
 void setup() {
   Serial.begin(115200);
