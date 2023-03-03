@@ -52,10 +52,12 @@ bool cycleSwitchNormallyClosed = false;
 uint16_t debounceTime = 25; // ms
 char AP_SSID[32] = "Dettlaff";
 char AP_PW[32] = "KellyIndu";
-dshot_mode_t dshotMode =  DSHOT300; // DSHOT_OFF to fall back to servo PWM
+dshot_mode_t dshotMode =  DSHOT150; // DSHOT_OFF to fall back to servo PWM
 uint16_t targetLoopTime_us = 1000; // microseconds
 uint32_t firingRPM[4] = {revRPM[0]*9/10, revRPM[1]*9/10, // for closed loop flywheel mode only - not implemented yet
                          revRPM[2]*9/10, revRPM[3]*9/10};
+float maxDutyCycle_pct = 98;
+uint8_t deadtime = 10;
 
 // End Configuration Variables
 
@@ -88,7 +90,7 @@ DShotRMT dshot[4] = {DShotRMT(pins.esc1, RMT_CHANNEL_1), DShotRMT(pins.esc2, RMT
 
 void WiFiInit();
 
-Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 99, 20000, 10);
+Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 98, 20000, 10);
 
 void setup() {
   Serial.begin(115200);
@@ -100,7 +102,7 @@ void setup() {
   WiFiInit();
   /*
   if (pins.pusherDriverType == HBRIDGE_DRIVER) {
-    Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 99, 20000, 5);
+//    Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 98, 20000, 10);
   } else if (pins.pusherDriverType == AT8870_DRIVER) {
     At8870 pusher = At8870(pins.pusher1L, pins.pusher2L, 20000);
   } else if (pins.pusherDriverType == FET_DRIVER) {
