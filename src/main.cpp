@@ -6,6 +6,7 @@
 #include "ESP32Servo.h"
 #include "types.h"
 #include "boards_config.cpp"
+#include "driver.h"
 #include "fetDriver.h"
 #include "at8870Driver.h"
 #include "hBridgeDriver.h"
@@ -58,6 +59,7 @@ uint32_t firingRPM[4] = {revRPM[0]*9/10, revRPM[1]*9/10, // for closed loop flyw
                          revRPM[2]*9/10, revRPM[3]*9/10};
 float maxDutyCycle_pct = 98;
 uint8_t deadtime = 10;
+uint16_t pwmFreq_hz = 20000;
 
 // End Configuration Variables
 
@@ -77,6 +79,7 @@ bool closedLoopFlywheels = false;
 uint32_t scaledMotorKv = motorKv * 11; // motor kv * battery voltage resistor divider ratio
 const uint32_t maxThrottle = 1999;
 uint32_t motorRPM[4] = {0, 0, 0, 0};
+Driver* pusher;
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
@@ -90,8 +93,6 @@ DShotRMT dshot[4] = {DShotRMT(pins.esc1, RMT_CHANNEL_1), DShotRMT(pins.esc2, RMT
 
 void WiFiInit();
 
-Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 98, 20000, 10);
-
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting");
@@ -100,15 +101,21 @@ void setup() {
     digitalWrite(pins.flywheel, HIGH);
   }
   WiFiInit();
-  /*
-  if (pins.pusherDriverType == HBRIDGE_DRIVER) {
-//    Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 98, 20000, 10);
-  } else if (pins.pusherDriverType == AT8870_DRIVER) {
-    At8870 pusher = At8870(pins.pusher1L, pins.pusher2L, 20000);
-  } else if (pins.pusherDriverType == FET_DRIVER) {
-    Fet pusher = Fet(pins.pusher1H);
+
+  switch (pins.pusherDriverType) {
+    case HBRIDGE_DRIVER:
+      pusher = new Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, maxDutyCycle_pct, pwmFreq_hz, deadtime);
+      break;
+    case AT8870_DRIVER:
+      pusher = new At8870(pins.pusher1L, pins.pusher2L, pwmFreq_hz);
+      break;
+    case FET_DRIVER:
+      pusher = new Fet(pins.pusher1H);
+      break;
+    default:
+      break;
   }
-  */
+
   if (pins.revSwitch) {
     revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
     revSwitch.interval(debounceTime);
@@ -209,17 +216,17 @@ void loop() {
           case PUSHER_MOTOR_CLOSEDLOOP:
             cycleSwitch.update();
             if (shotsToFire > 0 && !firing) { // start pusher stroke
-              pusher.drive(100, pusherReverseDirection);
+              pusher->drive(100, pusherReverseDirection);
               firing = true;
               pusherTimer_ms = time_ms;
             } else if (firing && shotsToFire == 0 && cycleSwitch.pressed()) { // brake pusher
-              pusher.brake();
+              pusher->brake();
               firing = false;
             } else if (firing && shotsToFire > 0 && cycleSwitch.released()) {
               shotsToFire = shotsToFire-1;
               pusherTimer_ms = time_ms;
             } else if (firing && time_ms > pusherTimer_ms + pusherStallTime_ms) { // stall protection
-              pusher.coast();
+              pusher->coast();
               shotsToFire = 0;
               firing = false;
               Serial.println("Pusher motor stalled!");
@@ -228,13 +235,13 @@ void loop() {
 
           case PUSHER_SOLENOID_OPENLOOP:
             if (shotsToFire > 0 && !firing && time_ms > pusherTimer_ms + solenoidRetractTime_ms) { // extend solenoid
-              pusher.drive(100, pusherReverseDirection);
+              pusher->drive(100, pusherReverseDirection);
               firing = true;
               shotsToFire -= 1;
               pusherTimer_ms = time_ms;
               Serial.println("solenoid extending");
             } else if (firing && time_ms > pusherTimer_ms + solenoidExtendTime_ms) { // retract solenoid
-              pusher.coast();
+              pusher->coast();
               firing = false;
               pusherTimer_ms = time_ms;
               Serial.println("solenoid retracting");
