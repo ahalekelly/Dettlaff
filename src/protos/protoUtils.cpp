@@ -117,7 +117,7 @@ void PrettyPrintControlParams(SimpleSerialShell& printer, Blaster& blaster)
             FireModeEntry fireModeEntry = controlParams.fireModesArray[ndx];
 
             printer.printf("\tEntry %d", ndx);
-            printer.printf("\t\tRpm: %d, Burst Length %d, Burst Type: ", fireModeEntry.rpm, fireModeEntry.burstLength);
+            printer.printf("\t\tBurst Length %d, Burst Type: ", fireModeEntry.burstLength);
             switch (fireModeEntry.type) {
             case PusherBurstType_PUSHER_BURST_STOP:
                 printer.printf("Stop");
@@ -134,6 +134,10 @@ void PrettyPrintControlParams(SimpleSerialShell& printer, Blaster& blaster)
                 printer.printf("Invalid");
                 break;
             }
+            printer.printf(" RPMs: |");
+            for (int rpmNdx = 0; rpmNdx < fireModeEntry.rpm_count; rpmNdx++) {
+                printer.printf(" %d |", fireModeEntry.rpm[rpmNdx]);
+            }
             printer.printf("\n");
         }
     } else {
@@ -146,6 +150,8 @@ void PrettyPrintFlywheelConfig(SimpleSerialShell& printer, Blaster& blaster)
     if (blaster.has_flywheelConfig) {
         printer.printf("Flywheel Config\n");
         FlywheelConfig flywheelConfig = blaster.flywheelConfig;
+
+        printer.printf("Number of motors: %d\n", flywheelConfig.numMotors);
 
         printer.printf("\tMotor Control Method: %s\n",
             ((flywheelConfig.controlMethod == MotorControlMethod_ESC_DSHOT)            ? "DShot"
@@ -174,13 +180,14 @@ void PrettyPrintFlywheelConfig(SimpleSerialShell& printer, Blaster& blaster)
         for (int ndx = 0; ndx < flywheelConfig.motorConfig_count; ndx++) {
             MotorConfig motorConfig = flywheelConfig.motorConfig[ndx];
 
-            printer.printf("Motor %d: KV: %d, Rev RPM: %d, Idle RPM %d, Firing Threshold RPM %d\n",
-                ndx, motorConfig.motorKv, motorConfig.revRPM, motorConfig.idleRPM, motorConfig.firingThresholdRpm);
+            printer.printf("Motor %d: KV: %d, Idle RPM %d, Firing Threshold %d%\n",
+                ndx, motorConfig.motorKv, motorConfig.idleRPM, motorConfig.firingThresholdPercentage);
         }
     } else {
         printer.printf("No Flywheel Config\n");
     }
 }
+
 void PrettyPrintBlaster(SimpleSerialShell& printer, Blaster& blaster)
 {
     printer.printf("Name: %s\n", blaster.blasterName);

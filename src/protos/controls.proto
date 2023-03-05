@@ -39,7 +39,7 @@ message ControlParams
 
 message FireModeEntry
 {
-    int32 rpm = 1;
+    repeated int32 rpm = 1 [ (nanopb).max_count = 4 ];
     int32 burstLength = 2;
     PusherBurstType type = 3;
 }
