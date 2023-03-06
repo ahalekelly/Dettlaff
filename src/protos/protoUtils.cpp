@@ -188,6 +188,32 @@ void PrettyPrintFlywheelConfig(SimpleSerialShell& printer, Blaster& blaster)
     }
 }
 
+void PrettyPrintFlywheelParams(SimpleSerialShell& printer, Blaster& blaster)
+{
+    printer.printf("Flywheel Params of type: ");
+    if (blaster.which_flywheelParams == 0) {
+        printer.printf("Closed Loop\n");
+
+        ClosedLoopFlywheelParams closedLoopFlywheelParams = blaster.flywheelParams.closedLoopFlywheelParams;
+
+        printer.printf("\tIdle RPM: %d, Idle Time: %d ms, Spindown Speed: %d\n",
+            closedLoopFlywheelParams.idleRpm,
+            closedLoopFlywheelParams.idleTime_ms,
+            closedLoopFlywheelParams.spindownSpeed);
+    } else {
+        printer.printf("Open Loop\n");
+
+        OpenLoopFlywheelParams openLoopFlywheelParams = blaster.flywheelParams.openLoopFlywheelParams;
+
+        printer.printf("\tIdle Duty Cycle: %d, Idle Time: %d ms, Minimum Rev Time: %d ms, Minimum Idle Rev Time: %d ms, Spindown Speed: %d\n",
+            openLoopFlywheelParams.idleDutyCycle,
+            openLoopFlywheelParams.idleTime_ms,
+            openLoopFlywheelParams.minimumRevTime_ms,
+            openLoopFlywheelParams.minimumIdleRevTime_ms,
+            openLoopFlywheelParams.spindownSpeed);
+    }
+}
+
 void PrettyPrintBlaster(SimpleSerialShell& printer, Blaster& blaster)
 {
     printer.printf("Name: %s\n", blaster.blasterName);
@@ -195,6 +221,7 @@ void PrettyPrintBlaster(SimpleSerialShell& printer, Blaster& blaster)
 
     PrettyPrintControlConfig(printer, blaster);
     PrettyPrintControlParams(printer, blaster);
+    PrettyPrintFlywheelConfig(printer, blaster);
     PrettyPrintFlywheelConfig(printer, blaster);
 }
 
