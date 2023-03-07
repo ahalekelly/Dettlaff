@@ -1,6 +1,100 @@
 #include "protoUtils.h"
 
+#include <stdio.h>
+
 #include "test.h"
+
+const char defaultName[] = "Detlaff";
+
+static Blaster getAllFieldsBlaster(void)
+{
+    Blaster allFields;
+
+    ControlConfig controlConfig;
+    controlConfig.triggerSwitchPin = 20; // Making up numbers here
+    controlConfig.TriggerSwitchOrientation = SwitchOrientation_SWITCH_NORMALLY_OPEN;
+    controlConfig.optRevSwitchPin = 21;
+    controlConfig.optRevSwitchOrientation = SwitchOrientation_SWITCH_NORMALLY_CLOSED;
+    controlConfig.fireModeCycleButtonPin = 22;
+
+    FireModeEntry entry1;
+    entry1.rpm_count = 4;
+    entry1.rpm[0] = 30000;
+    entry1.rpm[1] = 30000;
+    entry1.rpm[2] = 30000;
+    entry1.rpm[3] = 30000;
+    entry1.burstLength = 3,
+    entry1.type = PusherBurstType_PUSHER_BURST_STOP;
+
+    FireModeEntry entry2;
+    entry2.rpm_count = 4;
+    entry2.rpm[0] = 24000;
+    entry2.rpm[1] = 24000;
+    entry2.rpm[2] = 24000;
+    entry2.rpm[3] = 24000;
+    entry2.burstLength = 1,
+    entry2.type = PusherBurstType_PUSHER_BURST_COMPLETE;
+
+    FireModeEntry entry3;
+    entry3.rpm_count = 4;
+    entry3.rpm[0] = 50000;
+    entry3.rpm[1] = 50000;
+    entry3.rpm[2] = 50000;
+    entry3.rpm[3] = 50000;
+    entry3.burstLength = -1,
+    entry3.type = PusherBurstType_PUSHER_BURST_COUNT;
+
+    ControlParams controlParams;
+    controlParams.fireModesArray_count = 3;
+    memcpy(&controlParams.fireModesArray[0], &entry1, sizeof(FireModeEntry));
+    memcpy(&controlParams.fireModesArray[1], &entry2, sizeof(FireModeEntry));
+    memcpy(&controlParams.fireModesArray[2], &entry3, sizeof(FireModeEntry));
+    controlParams.currentFiringMode = 0;
+
+    FlywheelConfig flywheelConfig;
+    flywheelConfig.numMotors = 4;
+    flywheelConfig.controlMethod = MotorControlMethod_ESC_DSHOT;
+    flywheelConfig.dshotMode = DshotModes_DSHOT_600;
+    flywheelConfig.telemetryMethod = TelemMethod_BIDIRECTIONAL_DSHOT;
+    flywheelConfig.motorConfig_count = 4;
+    flywheelConfig.motorConfig[0].motorKv = 2700;
+    flywheelConfig.motorConfig[0].idleRPM = 24000;
+    flywheelConfig.motorConfig[0].firingThresholdPercentage = 80;
+    memcpy(&flywheelConfig.motorConfig[1], &flywheelConfig.motorConfig[0], sizeof(MotorConfig));
+    memcpy(&flywheelConfig.motorConfig[2], &flywheelConfig.motorConfig[0], sizeof(MotorConfig));
+    memcpy(&flywheelConfig.motorConfig[3], &flywheelConfig.motorConfig[0], sizeof(MotorConfig));
+
+    ClosedLoopFlywheelParams clFlywheelParams;
+    clFlywheelParams.idleRpm = 24000;
+    clFlywheelParams.idleTime_ms = 500;
+    clFlywheelParams.spindownSpeed = 9;
+
+    PusherConfig pusherConfig;
+    pusherConfig.type = PusherType_PUSHER_SOLENOID_CLOSEDLOOP;
+    pusherConfig.controlInputs_count = 1;
+    pusherConfig.controlInputs[0].type = PusherControlInputType_PUSHER_REARMOST;
+    pusherConfig.controlInputs[0].dataPin = 27;
+    pusherConfig.which_PusherTimings = 2; // Guess here, intending solenoid
+    pusherConfig.PusherTimings.solenoidTiming.extendTime = 50; // Making up numbers here
+    pusherConfig.PusherTimings.solenoidTiming.retractTime = 70;
+    pusherConfig.pusherVoltage_mv = 11100; // 3S voltage for no particular reason
+    pusherConfig.pusherDirectionReverse = false;
+
+    strncpy(allFields.blasterName, defaultName, 20);
+    allFields.has_controlconfig = true;
+    memcpy(&allFields.controlconfig, &controlConfig, sizeof(ControlConfig));
+    allFields.has_controlParams = true;
+    memcpy(&allFields.controlParams, &controlParams, sizeof(ControlParams));
+    allFields.has_flywheelConfig = true;
+    memcpy(&allFields.flywheelConfig, &flywheelConfig, sizeof(FlywheelConfig));
+    allFields.which_flywheelParams = 1; // I think this means closed loop, assuming 0 is none and 2 is open loop
+    memcpy(&allFields.flywheelParams.closedLoopFlywheelParams, &clFlywheelParams, sizeof(ClosedLoopFlywheelParams));
+    allFields.has_pusherConfig = true;
+    memcpy(&allFields.pusherConfig, &pusherConfig, sizeof(PusherConfig));
+    allFields.hardwareVersion = HardwareVersion_VERSION_0P4;
+
+    return allFields;
+}
 
 void TestProtos(void)
 {
@@ -11,9 +105,7 @@ void TestProtos(void)
 
     pb_ostream_t outputStream = pb_ostream_from_buffer(buffer, sizeof(buffer));
 
-    char name[] = "Detlaff";
-
-    strncpy(test1.blasterName, name, 20);
+    strncpy(test1.blasterName, defaultName, 20);
     test1.has_controlconfig = true;
     test1.controlconfig.triggerSwitchPin = 15;
 
@@ -33,6 +125,23 @@ void TestProtos(void)
     ProtoDecodeFromString(&received, bufferString);
 
     assert(strncmp(test1.blasterName, received.blasterName, 20) == 0);
+
+    shell.printf("\nAll Field blaster test:\n");
+    uint8_t allFieldBuffer[1024]; // Much longer than it actually need to be
+
+    outputStream = pb_ostream_from_buffer(allFieldBuffer, sizeof(allFieldBuffer));
+
+    Blaster allFields = getAllFieldsBlaster();
+    PrettyPrintBlaster(shell, allFields);
+
+    status = pb_encode(&outputStream, Blaster_fields, &allFields);
+    assert(status);
+    messageLength = outputStream.bytes_written;
+    shell.printf("Proto Buffer is %d bytes long: |0x", messageLength);
+    for (int ndx = 0; ndx < messageLength; ndx++) {
+        shell.printf("%02x", allFieldBuffer[ndx]);
+    }
+    shell.printf("|\n");
 }
 
 void ProtoDecodeFromString(Blaster* received, const std::string& input)
