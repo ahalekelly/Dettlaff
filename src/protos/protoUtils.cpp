@@ -151,7 +151,7 @@ void PrettyPrintFlywheelConfig(SimpleSerialShell& printer, Blaster& blaster)
         printer.printf("Flywheel Config\n");
         FlywheelConfig flywheelConfig = blaster.flywheelConfig;
 
-        printer.printf("Number of motors: %d\n", flywheelConfig.numMotors);
+        printer.printf("\tNumber of motors: %d\n", flywheelConfig.numMotors);
 
         printer.printf("\tMotor Control Method: %s\n",
             ((flywheelConfig.controlMethod == MotorControlMethod_ESC_DSHOT)            ? "DShot"
@@ -180,11 +180,11 @@ void PrettyPrintFlywheelConfig(SimpleSerialShell& printer, Blaster& blaster)
         for (int ndx = 0; ndx < flywheelConfig.motorConfig_count; ndx++) {
             MotorConfig motorConfig = flywheelConfig.motorConfig[ndx];
 
-            printer.printf("Motor %d: KV: %d, Idle RPM %d, Firing Threshold %d%\n",
+            printer.printf("\t\tMotor %d: KV: %d, Idle RPM %d, Firing Threshold %d%\n",
                 ndx, motorConfig.motorKv, motorConfig.idleRPM, motorConfig.firingThresholdPercentage);
         }
     } else {
-        printer.printf("No Flywheel Config\n");
+        printer.printf("\t\tNo Flywheel Config\n");
     }
 }
 
@@ -222,10 +222,10 @@ void PrettyPrintBlaster(SimpleSerialShell& printer, Blaster& blaster)
     PrettyPrintControlConfig(printer, blaster);
     PrettyPrintControlParams(printer, blaster);
     PrettyPrintFlywheelConfig(printer, blaster);
-    PrettyPrintFlywheelConfig(printer, blaster);
+    PrettyPrintFlywheelParams(printer, blaster);
 }
 
-// Do I need to past this by reference?
+// Do I need to pass this by reference?
 void ProtoEncodeToString(Blaster& received, std::string* output)
 {
 
