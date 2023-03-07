@@ -214,6 +214,44 @@ void PrettyPrintFlywheelParams(SimpleSerialShell& printer, Blaster& blaster)
     }
 }
 
+void prettyPrintPusherConfig(SimpleSerialShell& printer, Blaster& blaster)
+{
+    int ndx;
+
+    PusherConfig pusherConfig = blaster.pusherConfig;
+    printer.printf("Pusher Params of type: %s\n",
+        ((pusherConfig.type == PusherType_PUSHER_MOTOR_CLOSEDLOOP)             ? "Motor closed Loop"
+                : (pusherConfig.type == PusherType_PUSHER_SOLENOID_CLOSEDLOOP) ? "Solenoid closed loop"
+                : (pusherConfig.type == PusherType_PUSHER_MOTOR_OPENLOOP)      ? "Motor open loop"
+                : (pusherConfig.type == PusherType_PUSHER_SOLENOID_OPENLOOP)   ? "Solenoid open loop"
+                                                                               : "Invalid"));
+
+    printer.printf("\tPusher control inputs:\n");
+
+    for (ndx = 0; ndx < pusherConfig.controlInputs_count; ndx++) {
+        printer.printf("\t\t%d: Pin: %d Type: %s\n", ndx, pusherConfig.controlInputs[ndx].dataPin,
+            ((pusherConfig.controlInputs[ndx].type == PusherControlInputType_PUSHER_REARMOST)          ? "Rearmost switch"
+                    : (pusherConfig.controlInputs[ndx].type == PusherControlInputType_PUSHER_FOREMOST) ? "Foremost swtich"
+                    : (pusherConfig.controlInputs[ndx].type == PusherControlInputType_PUSHER_POSITION) ? "Pusher position"
+                                                                                                       : "Invalid"));
+    }
+    if (ndx == 0) {
+        printer.printf("\tNo pusher control inputs\n");
+    }
+
+    if (pusherConfig.which_PusherTimings == 0) {
+        printer.printf("\tMotor stall timing: %d ms\n", pusherConfig.PusherTimings.motorTiming.stallTime_ms);
+    } else {
+        printer.printf("\tSolenoid extend time: %d ms, retract time: %d ms\n", pusherConfig.PusherTimings.solenoidTiming.extendTime,
+            pusherConfig.PusherTimings.solenoidTiming.retractTime);
+    }
+
+    printer.printf("\tPusherVoltage: %d mv\n", pusherConfig.pusherVoltage_mv);
+    printer.printf("\tPusher direction: %s\n", (pusherConfig.pusherDirectionReverse ? "Reverse" : "Forward"));
+}
+
+// No Pusher params because they live in the control protos
+
 void PrettyPrintBlaster(SimpleSerialShell& printer, Blaster& blaster)
 {
     printer.printf("Name: %s\n", blaster.blasterName);
@@ -223,6 +261,7 @@ void PrettyPrintBlaster(SimpleSerialShell& printer, Blaster& blaster)
     PrettyPrintControlParams(printer, blaster);
     PrettyPrintFlywheelConfig(printer, blaster);
     PrettyPrintFlywheelParams(printer, blaster);
+    prettyPrintPusherConfig(printer, blaster);
 }
 
 // Do I need to pass this by reference?
