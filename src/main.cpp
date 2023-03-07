@@ -4,9 +4,9 @@
 #include "Bounce2.h"
 #include "DShotRMT.h"
 #include "ESP32Servo.h"
+#include "at8870Driver.h"
 #include "boards_config.cpp"
 #include "fetDriver.h"
-#include "at8870Driver.h"
 #include "hBridgeDriver.h"
 #include "types.h"
 
@@ -18,7 +18,7 @@ uint8_t numMotors = 2; // 2 for single-stage, 4 for dual-stage
 uint32_t revRPM[4] = { // adjust this to change fps - note that these numbers currently assume you have a 4S battery! will fix soon
     50000, 50000,
     50000, 50000
-}; 
+};
 uint32_t idleRPM[4] = {
     1000, 1000,
     1000, 1000
@@ -59,10 +59,10 @@ bool cycleSwitchNormallyClosed = false;
 uint16_t debounceTime = 25; // ms
 char AP_SSID[32] = "Dettlaff";
 char AP_PW[32] = "KellyIndu";
-dshot_mode_t dshotMode =  DSHOT150; // DSHOT_OFF to fall back to servo PWM
+dshot_mode_t dshotMode = DSHOT150; // DSHOT_OFF to fall back to servo PWM
 uint16_t targetLoopTime_us = 1000; // microseconds
-uint32_t firingRPM[4] = {revRPM[0]*9/10, revRPM[1]*9/10, // for closed loop flywheel mode only - not implemented yet
-                         revRPM[2]*9/10, revRPM[3]*9/10};
+uint32_t firingRPM[4] = { revRPM[0] * 9 / 10, revRPM[1] * 9 / 10, // for closed loop flywheel mode only - not implemented yet
+    revRPM[2] * 9 / 10, revRPM[3] * 9 / 10 };
 float maxDutyCycle_pct = 98;
 uint8_t deadtime = 10;
 
@@ -101,40 +101,41 @@ DShotRMT dshot[4] = { DShotRMT(pins.esc1, RMT_CHANNEL_1), DShotRMT(pins.esc2, RM
 
 Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 98, 20000, 10);
 
-void setup() {
-  Serial.begin(115200);
-  Serial.println("Booting");
-  if (pins.flywheel) {
-    pinMode(pins.flywheel, OUTPUT);
-    digitalWrite(pins.flywheel, HIGH);
-  }
-  // WiFiInit();
-  /*
-  if (pins.pusherDriverType == HBRIDGE_DRIVER) {
-//    Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 98, 20000, 10);
-  } else if (pins.pusherDriverType == AT8870_DRIVER) {
-    At8870 pusher = At8870(pins.pusher1L, pins.pusher2L, 20000);
-  } else if (pins.pusherDriverType == FET_DRIVER) {
-    Fet pusher = Fet(pins.pusher1H);
-  }
-  */
-  Serial2.begin(115200, SERIAL_8N1, pins.telem, 4); // need to find a pin that's unused to use as telemetry serial TX - pin 4 is ESC1 on v0.1 but unused on v0.2-v0.4
-  pinMode(pins.telem, INPUT_PULLUP);
-  if (pins.revSwitch) {
-    revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
-    revSwitch.interval(debounceTime);
-    revSwitch.setPressedState(revSwitchNormallyClosed);
-  }
-  if (pins.triggerSwitch) {
-    triggerSwitch.attach(pins.triggerSwitch, INPUT_PULLUP);
-    triggerSwitch.interval(debounceTime);
-    triggerSwitch.setPressedState(triggerSwitchNormallyClosed);
-  }
-  if (pins.cycleSwitch) {
-    cycleSwitch.attach(pins.cycleSwitch, INPUT_PULLUP);
-    cycleSwitch.interval(debounceTime);
-    cycleSwitch.setPressedState(cycleSwitchNormallyClosed);
-  }
+void setup()
+{
+    Serial.begin(115200);
+    Serial.println("Booting");
+    if (pins.flywheel) {
+        pinMode(pins.flywheel, OUTPUT);
+        digitalWrite(pins.flywheel, HIGH);
+    }
+    // WiFiInit();
+    /*
+    if (pins.pusherDriverType == HBRIDGE_DRIVER) {
+  //    Hbridge pusher = Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, 98, 20000, 10);
+    } else if (pins.pusherDriverType == AT8870_DRIVER) {
+      At8870 pusher = At8870(pins.pusher1L, pins.pusher2L, 20000);
+    } else if (pins.pusherDriverType == FET_DRIVER) {
+      Fet pusher = Fet(pins.pusher1H);
+    }
+    */
+    Serial2.begin(115200, SERIAL_8N1, pins.telem, 4); // need to find a pin that's unused to use as telemetry serial TX - pin 4 is ESC1 on v0.1 but unused on v0.2-v0.4
+    pinMode(pins.telem, INPUT_PULLUP);
+    if (pins.revSwitch) {
+        revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
+        revSwitch.interval(debounceTime);
+        revSwitch.setPressedState(revSwitchNormallyClosed);
+    }
+    if (pins.triggerSwitch) {
+        triggerSwitch.attach(pins.triggerSwitch, INPUT_PULLUP);
+        triggerSwitch.interval(debounceTime);
+        triggerSwitch.setPressedState(triggerSwitchNormallyClosed);
+    }
+    if (pins.cycleSwitch) {
+        cycleSwitch.attach(pins.cycleSwitch, INPUT_PULLUP);
+        cycleSwitch.interval(debounceTime);
+        cycleSwitch.setPressedState(cycleSwitchNormallyClosed);
+    }
 
     if (dshotMode == DSHOT_OFF) {
         for (int i = 0; i < 4; i++) {
@@ -224,81 +225,82 @@ void loop()
             flywheelState = STATE_IDLE;
         } else if (shotsToFire > 0 || firing) {
             switch (pusherType) {
+            case PUSHER_MOTOR_CLOSEDLOOP:
+                cycleSwitch.update();
+                if (shotsToFire > 0 && !firing) { // start pusher stroke
+                    pusher.drive(100, pusherReverseDirection);
+                    firing = true;
+                    pusherTimer_ms = time_ms;
+                } else if (firing && shotsToFire == 0 && cycleSwitch.pressed()) { // brake pusher
+                    pusher.brake();
+                    firing = false;
+                } else if (firing && shotsToFire > 0 && cycleSwitch.released()) {
+                    shotsToFire = shotsToFire - 1;
+                    pusherTimer_ms = time_ms;
+                } else if (firing && time_ms > pusherTimer_ms + pusherStallTime_ms) { // stall protection
+                    pusher.coast();
+                    shotsToFire = 0;
+                    firing = false;
+                    Serial.println("Pusher motor stalled!");
+                }
+                break;
 
-          case PUSHER_MOTOR_CLOSEDLOOP:
-            cycleSwitch.update();
-            if (shotsToFire > 0 && !firing) { // start pusher stroke
-              pusher.drive(100, pusherReverseDirection);
-              firing = true;
-              pusherTimer_ms = time_ms;
-            } else if (firing && shotsToFire == 0 && cycleSwitch.pressed()) { // brake pusher
-              pusher.brake();
-              firing = false;
-            } else if (firing && shotsToFire > 0 && cycleSwitch.released()) {
-              shotsToFire = shotsToFire-1;
-              pusherTimer_ms = time_ms;
-            } else if (firing && time_ms > pusherTimer_ms + pusherStallTime_ms) { // stall protection
-              pusher.coast();
-              shotsToFire = 0;
-              firing = false;
-              Serial.println("Pusher motor stalled!");
+            case PUSHER_SOLENOID_OPENLOOP:
+                if (shotsToFire > 0 && !firing && time_ms > pusherTimer_ms + solenoidRetractTime_ms) { // extend solenoid
+                    pusher.drive(100, pusherReverseDirection);
+                    firing = true;
+                    shotsToFire -= 1;
+                    pusherTimer_ms = time_ms;
+                    Serial.println("solenoid extending");
+                } else if (firing && time_ms > pusherTimer_ms + solenoidExtendTime_ms) { // retract solenoid
+                    pusher.coast();
+                    firing = false;
+                    pusherTimer_ms = time_ms;
+                    Serial.println("solenoid retracting");
+                }
             }
             break;
+        }
 
-          case PUSHER_SOLENOID_OPENLOOP:
-            if (shotsToFire > 0 && !firing && time_ms > pusherTimer_ms + solenoidRetractTime_ms) { // extend solenoid
-              pusher.drive(100, pusherReverseDirection);
-              firing = true;
-              shotsToFire -= 1;
-              pusherTimer_ms = time_ms;
-              Serial.println("solenoid extending");
-            } else if (firing && time_ms > pusherTimer_ms + solenoidExtendTime_ms) { // retract solenoid
-              pusher.coast();
-              firing = false;
-              pusherTimer_ms = time_ms;
-              Serial.println("solenoid retracting");
+        if (closedLoopFlywheels) {
+            // PID control code goes here
+        } else { // open loop case
+            for (int i = 0; i < numMotors; i++) {
+                if (throttleValue[i] == 0) {
+                    throttleValue[i] = min(maxThrottle, maxThrottle * *targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv);
+                } else {
+                    throttleValue[i] = max(min(maxThrottle, maxThrottle * *targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv),
+                        throttleValue[i] - spindownSpeed);
+                }
             }
-        }
-        break;
-    }
 
-  if (closedLoopFlywheels) {
-    // PID control code goes here
-  } else { // open loop case
-    for (int i = 0; i < numMotors; i++) {
-      if (throttleValue[i] == 0) {
-        throttleValue[i] = min(maxThrottle, maxThrottle * *targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv);
-      } else {
-        throttleValue[i] = max(min(maxThrottle, maxThrottle * *targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv),
-        throttleValue[i]-spindownSpeed);}
-    }
-
-    // send signal to ESCs
-    if (dshotMode == DSHOT_OFF) {
-        for (int i = 0; i < numMotors; i++) {
-            servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
-        }
-    } else {
-        for (int i = 0; i < numMotors; i++) {
-            if (i == telemMotorNum) {
-                dshot[i].send_dshot_value(throttleValue[i] + 48,
-                    ENABLE_TELEMETRIC); // is there a way to have dshot library only send one
-                                        // telemetric packet? doesn't seem like it
+            // send signal to ESCs
+            if (dshotMode == DSHOT_OFF) {
+                for (int i = 0; i < numMotors; i++) {
+                    servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
+                }
             } else {
-                dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
+                for (int i = 0; i < numMotors; i++) {
+                    if (i == telemMotorNum) {
+                        dshot[i].send_dshot_value(throttleValue[i] + 48,
+                            ENABLE_TELEMETRIC); // is there a way to have dshot library only send one
+                                                // telemetric packet? doesn't seem like it
+                    } else {
+                        dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
+                    }
+                }
+            }
+            ArduinoOTA.handle();
+            loopTime_us = micros() - loopStartTimer_us; // 'us' is microseconds
+            if (loopTime_us > targetLoopTime_us) {
+                Serial.print("loop over time, ");
+                Serial.println(loopTime_us);
+            } else {
+                delayMicroseconds(max((long)(0), (long)(targetLoopTime_us - loopTime_us)));
             }
         }
-    }
-    ArduinoOTA.handle();
-    loopTime_us = micros() - loopStartTimer_us; // 'us' is microseconds
-    if (loopTime_us > targetLoopTime_us) {
-        Serial.print("loop over time, ");
-        Serial.println(loopTime_us);
-    } else {
-        delayMicroseconds(max((long)(0), (long)(targetLoopTime_us - loopTime_us)));
     }
 }
-
 // void WiFiInit()
 // {
 //   WiFi.mode(WIFI_STA);
