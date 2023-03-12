@@ -6,6 +6,48 @@
 
 const char defaultName[] = "Detlaff";
 
+static void PrettyPrintHardwareVersion(SimpleSerialShell& printer, Blaster& blaster);
+static void PrettyPrintControlConfig(SimpleSerialShell& printer, Blaster& blaster);
+static void PrettyPrintControlParams(SimpleSerialShell& printer, Blaster& blaster);
+static void PrettyPrintFlywheelConfig(SimpleSerialShell& printer, Blaster& blaster);
+static void PrettyPrintFlywheelParams(SimpleSerialShell& printer, Blaster& blaster);
+static void prettyPrintPusherConfig(SimpleSerialShell& printer, Blaster& blaster);
+
+int ProtoDecodeFromString(Blaster* received, const std::string& input)
+{
+    pb_istream_t inStream = pb_istream_from_buffer((const pb_byte_t*)input.c_str(), input.length());
+
+    return (pb_decode(&inStream, Blaster_fields, received)) ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+int ProtoEncodeToString(const Blaster& received, std::string* output)
+{
+    const unsigned bufferLen = 512;
+    uint8_t buffer[bufferLen];
+
+    pb_ostream_t outputStream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+
+    if (!pb_encode(&outputStream, Blaster_fields, &received)) {
+        return EXIT_FAILURE;
+    }
+
+    output->insert(0, (char*)buffer, outputStream.bytes_written);
+
+    return EXIT_SUCCESS;
+}
+
+void PrettyPrintBlaster(SimpleSerialShell& printer, Blaster& blaster)
+{
+    printer.printf("Name: %s\n", blaster.blasterName);
+    PrettyPrintHardwareVersion(printer, blaster);
+
+    PrettyPrintControlConfig(printer, blaster);
+    PrettyPrintControlParams(printer, blaster);
+    PrettyPrintFlywheelConfig(printer, blaster);
+    PrettyPrintFlywheelParams(printer, blaster);
+    prettyPrintPusherConfig(printer, blaster);
+}
+
 static Blaster getAllFieldsBlaster(void)
 {
     Blaster allFields;
@@ -98,64 +140,45 @@ static Blaster getAllFieldsBlaster(void)
 
 void TestProtos(void)
 {
-    unsigned bufferLen = 128;
-    uint8_t buffer[bufferLen];
-    bool status;
+    std::string buffer;
     Blaster test1 = Blaster_init_zero;
-
-    pb_ostream_t outputStream = pb_ostream_from_buffer(buffer, sizeof(buffer));
 
     strncpy(test1.blasterName, defaultName, 20);
     test1.has_controlconfig = true;
     test1.controlconfig.triggerSwitchPin = 15;
 
-    status = pb_encode(&outputStream, Blaster_fields, &test1);
-    assert(status);
-    size_t messageLength = outputStream.bytes_written;
+    ProtoEncodeToString(test1, &buffer);
 
-    shell.printf("Proto Buffer is: |0x");
-    for (int ndx = 0; ndx < messageLength; ndx++) {
-        shell.printf(" %02x", buffer[ndx]);
+    shell.printf("Proto Buffer is: %d|0x", buffer.size());
+    for (int ndx = 0; ndx < buffer.size(); ndx++) {
+        shell.printf(" %02x", buffer.c_str()[ndx]);
     }
     shell.printf("|\n");
 
-    std::string bufferString = std::string((char*)buffer, messageLength);
     Blaster received = Blaster_init_zero;
 
-    ProtoDecodeFromString(&received, bufferString);
+    ProtoDecodeFromString(&received, buffer);
+    shell.printf("Received blaster:\n");
+    PrettyPrintBlaster(shell, received);
 
     assert(strncmp(test1.blasterName, received.blasterName, 20) == 0);
 
     shell.printf("\nAll Field blaster test:\n");
     uint8_t allFieldBuffer[1024]; // Much longer than it actually need to be
 
-    outputStream = pb_ostream_from_buffer(allFieldBuffer, sizeof(allFieldBuffer));
-
     Blaster allFields = getAllFieldsBlaster();
     PrettyPrintBlaster(shell, allFields);
 
-    status = pb_encode(&outputStream, Blaster_fields, &allFields);
-    assert(status);
-    messageLength = outputStream.bytes_written;
-    shell.printf("Proto Buffer is %d bytes long: |0x", messageLength);
-    for (int ndx = 0; ndx < messageLength; ndx++) {
-        shell.printf("%02x", allFieldBuffer[ndx]);
+    ProtoEncodeToString(allFields, &buffer);
+
+    shell.printf("Proto Buffer is %d bytes long: |0x", buffer.size());
+    for (int ndx = 0; ndx < buffer.size(); ndx++) {
+        shell.printf("%02x", buffer.c_str()[ndx]);
     }
-    shell.printf("|\n");
+    shell.printf("|\n%s\n", buffer.c_str());
 }
 
-void ProtoDecodeFromString(Blaster* received, const std::string& input)
-{
-    pb_istream_t inStream = pb_istream_from_buffer((const pb_byte_t*)input.c_str(), input.length());
-
-    bool status = pb_decode(&inStream, Blaster_fields, received);
-    assert(status);
-
-    shell.printf("Received blaster:\n");
-    PrettyPrintBlaster(shell, *received);
-}
-
-void PrettyPrintHardwareVersion(SimpleSerialShell& printer, Blaster& blaster)
+static void PrettyPrintHardwareVersion(SimpleSerialShell& printer, Blaster& blaster)
 {
     printer.printf("Detlaff Board Version: %s\n",
         ((blaster.hardwareVersion == HardwareVersion_VERSION_0P1)          ? "0.1"
@@ -165,7 +188,7 @@ void PrettyPrintHardwareVersion(SimpleSerialShell& printer, Blaster& blaster)
                                                                            : "Invalid"));
 }
 
-void PrettyPrintControlConfig(SimpleSerialShell& printer, Blaster& blaster)
+static void PrettyPrintControlConfig(SimpleSerialShell& printer, Blaster& blaster)
 {
     if (blaster.has_controlconfig) {
         printer.printf("Control Config\n");
@@ -212,7 +235,7 @@ void PrettyPrintControlConfig(SimpleSerialShell& printer, Blaster& blaster)
     }
 }
 
-void PrettyPrintControlParams(SimpleSerialShell& printer, Blaster& blaster)
+static void PrettyPrintControlParams(SimpleSerialShell& printer, Blaster& blaster)
 {
     if (blaster.has_controlParams) {
         ControlParams controlParams = blaster.controlParams;
@@ -254,7 +277,7 @@ void PrettyPrintControlParams(SimpleSerialShell& printer, Blaster& blaster)
     }
 }
 
-void PrettyPrintFlywheelConfig(SimpleSerialShell& printer, Blaster& blaster)
+static void PrettyPrintFlywheelConfig(SimpleSerialShell& printer, Blaster& blaster)
 {
     if (blaster.has_flywheelConfig) {
         printer.printf("Flywheel Config\n");
@@ -297,7 +320,7 @@ void PrettyPrintFlywheelConfig(SimpleSerialShell& printer, Blaster& blaster)
     }
 }
 
-void PrettyPrintFlywheelParams(SimpleSerialShell& printer, Blaster& blaster)
+static void PrettyPrintFlywheelParams(SimpleSerialShell& printer, Blaster& blaster)
 {
     printer.printf("Flywheel Params of type: ");
     if (blaster.which_flywheelParams == 0) {
@@ -323,7 +346,7 @@ void PrettyPrintFlywheelParams(SimpleSerialShell& printer, Blaster& blaster)
     }
 }
 
-void prettyPrintPusherConfig(SimpleSerialShell& printer, Blaster& blaster)
+static void prettyPrintPusherConfig(SimpleSerialShell& printer, Blaster& blaster)
 {
     int ndx;
 
@@ -360,26 +383,3 @@ void prettyPrintPusherConfig(SimpleSerialShell& printer, Blaster& blaster)
 }
 
 // No Pusher params because they live in the control protos
-
-void PrettyPrintBlaster(SimpleSerialShell& printer, Blaster& blaster)
-{
-    printer.printf("Name: %s\n", blaster.blasterName);
-    PrettyPrintHardwareVersion(printer, blaster);
-
-    PrettyPrintControlConfig(printer, blaster);
-    PrettyPrintControlParams(printer, blaster);
-    PrettyPrintFlywheelConfig(printer, blaster);
-    PrettyPrintFlywheelParams(printer, blaster);
-    prettyPrintPusherConfig(printer, blaster);
-}
-
-// Do I need to pass this by reference?
-void ProtoEncodeToString(Blaster& received, std::string* output)
-{
-
-    // Do we need this intermediary buffer? I don't think we can directly interact with the cstring from ble
-    // We also kinda need to interface with the BLE library in case we need to send a message longer than 512
-    // But blaster shouldn't be longer than 512; the longer stuff like OTA, esc flashing, etc will probably have its own characteristics
-    // TL;DR: This may not work well as a proto-only helper function
-    unsigned bufferLen = 512;
-}

@@ -53,11 +53,11 @@ public:
 class MyCallbacks : public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic* pCharacteristic)
     {
-        shell.printf("Got updated value %s\n", pCharacteristic->getValue());
-
         Blaster received = Blaster_init_zero;
 
         ProtoDecodeFromString(&received, pCharacteristic->getValue());
+        shell.printf("Received blaster:\n");
+        PrettyPrintBlaster(shell, received);
     }
 };
 

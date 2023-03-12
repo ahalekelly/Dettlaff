@@ -18,5 +18,7 @@ extern SimpleSerialShell& shell;
 
 void TestProtos(void);
 
-void ProtoDecodeFromString(Blaster* received, const std::string& input);
+int ProtoDecodeFromString(Blaster* received, const std::string& input);
+int ProtoEncodeToString(const Blaster& received, std::string* output);
+
 void PrettyPrintBlaster(SimpleSerialShell& printer, Blaster& blaster);
