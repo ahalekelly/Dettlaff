@@ -15,11 +15,12 @@
 
 char wifiSsid[32] = "ssid";
 char wifiPass[63] = "pass";
-uint8_t numMotors = 2; // 2 for single-stage, 4 for dual-stage
-uint32_t revRPM[4] = {50000, 50000, 50000, 50000}; // adjust this to change fps - note that these numbers currently assume you have a 4S battery! will fix soon
+uint32_t revRPM[4] = {50000, 50000, 50000, 50000}; // adjust this to change fps
+uint8_t numMotors = 4; // leave at 4 until we have closed loop control
 uint32_t idleRPM[4] = {1000, 1000, 1000, 1000};
 uint32_t idleTime_ms = 30000; // how long to idle the flywheels for after releasing the trigger, in milliseconds
-uint32_t motorKv = 2550;
+uint32_t motorKv = 3200;
+uint32_t batteryADC_mv = 14800 / 11; // battery voltage divided by voltage divider ratio
 pins_t pins = pins_v0_5; // select the one that matches your board revision and pusher type
 // Options:
 // _noid means use the flywheel output to drive a solenoid pusher
@@ -71,7 +72,6 @@ uint32_t pusherTimer_ms = 0;
 uint32_t zeroRPM[4] = {0, 0, 0, 0};
 uint32_t (*targetRPM)[4]; // a pointer to a uint32_t[4] array. always points to either revRPM, idleRPM, or zeroRPM
 uint32_t throttleValue[4] = {0, 0, 0, 0}; // scale is 0 - 1999
-uint32_t batteryADC_mv = 1340; // voltage at the ADC, after the voltage divider
 uint16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
@@ -256,9 +256,9 @@ void loop() {
   } else { // open loop case
     for (int i = 0; i < numMotors; i++) {
       if (throttleValue[i] == 0) {
-        throttleValue[i] = min(maxThrottle, maxThrottle * *targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv);
+        throttleValue[i] = min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryADC_mv * 1000 / scaledMotorKv);
       } else {
-        throttleValue[i] = max(min(maxThrottle, maxThrottle * *targetRPM[i] / batteryADC_mv * 1000 / scaledMotorKv),
+        throttleValue[i] = max(min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryADC_mv * 1000 / scaledMotorKv),
         throttleValue[i]-spindownSpeed);}
     }
   }
