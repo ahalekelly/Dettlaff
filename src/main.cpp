@@ -219,10 +219,12 @@ void loop() {
               pusher->drive(100, pusherReverseDirection);
               firing = true;
               pusherTimer_ms = time_ms;
-            } else if (firing && shotsToFire == 1 && cycleSwitch.pressed()) { // brake pusher
-              pusher->brake();
-              firing = false;
-              shotsToFire = shotsToFire-1;
+            } else if (firing && cycleSwitch.pressed()) {
+              shotsToFire = shotsToFire - 1;
+              if (shotsToFire == 0 ) {  // brake pusher
+                pusher->brake();
+                firing = false;
+              }
               pusherTimer_ms = time_ms;
             } else if (firing && time_ms > pusherTimer_ms + pusherStallTime_ms) { // stall protection
               pusher->coast();
