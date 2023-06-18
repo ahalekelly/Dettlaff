@@ -5,64 +5,11 @@
 #include "DShotRMT.h"
 #include "ESP32Servo.h"
 #include "types.h"
-#include "boards_config.cpp"
+#include "CONFIGURATION.h"
 #include "driver.h"
 #include "fetDriver.h"
 #include "at8870Driver.h"
 #include "hBridgeDriver.h"
-
-// Configuration Variables
-
-char wifiSsid[32] = "ssid";
-char wifiPass[63] = "pass";
-uint32_t revRPM[4] = {50000, 50000, 50000, 50000}; // adjust this to change fps
-uint8_t numMotors = 4; // leave at 4 until we have closed loop control
-uint32_t idleRPM[4] = {1000, 1000, 1000, 1000};
-uint32_t idleTime_ms = 30000; // how long to idle the flywheels for after releasing the trigger, in milliseconds
-uint32_t motorKv = 3200;
-uint32_t batteryADC_mv = 14800 / 11; // battery voltage divided by voltage divider ratio
-pins_t pins = pins_v0_5; // select the one that matches your board revision and pusher type
-// Options:
-// _noid means use the flywheel output to drive a solenoid pusher
-// _n20 for a pusher motor on the pusher output
-// pins_v0_4_n20
-// pins_v0_4_noid
-// pins_v0_3_n20
-// pins_v0_3_noid
-// pins_v0_2
-// pins_v0_1
-pusherType_t pusherType = PUSHER_SOLENOID_OPENLOOP;
-// PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
-uint16_t burstLength = 3;
-uint8_t bufferMode = 1;
-// 0 = stop firing when trigger is released
-// 1 = complete current burst when trigger is released
-// 2 = fire as many bursts as trigger pulls
-// for full auto, set burstLength high (50+) and bufferMode = 0
-uint16_t firingDelay_ms = 200; // delay to allow flywheels to spin up before pushing dart
-uint16_t solenoidExtendTime_ms = 20;
-uint16_t solenoidRetractTime_ms = 35;
-bool pusherReverseDirection = false;
-
-// Advanced Configuration Variables
-
-uint16_t pusherStallTime_ms = 500; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?
-uint16_t spindownSpeed = 1; // higher number makes the flywheels spin down faster when releasing the rev trigger
-bool revSwitchNormallyClosed = false; // should we invert rev signal?
-bool triggerSwitchNormallyClosed = false;
-bool cycleSwitchNormallyClosed = false;
-uint16_t debounceTime = 25; // ms
-char AP_SSID[32] = "Dettlaff";
-char AP_PW[32] = "KellyIndu";
-dshot_mode_t dshotMode =  DSHOT150; // DSHOT_OFF to fall back to servo PWM
-uint16_t targetLoopTime_us = 1000; // microseconds
-uint32_t firingRPM[4] = {revRPM[0]*9/10, revRPM[1]*9/10, // for closed loop flywheel mode only - not implemented yet
-                         revRPM[2]*9/10, revRPM[3]*9/10};
-float maxDutyCycle_pct = 98;
-uint8_t deadtime = 10;
-uint16_t pwmFreq_hz = 20000;
-
-// End Configuration Variables
 
 uint32_t loopStartTimer_us = micros();
 uint16_t loopTime_us = targetLoopTime_us;
@@ -118,17 +65,17 @@ void setup() {
 
   if (pins.revSwitch) {
     revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
-    revSwitch.interval(debounceTime);
+    revSwitch.interval(debounceTime_ms);
     revSwitch.setPressedState(revSwitchNormallyClosed);
   }
   if (pins.triggerSwitch) {
     triggerSwitch.attach(pins.triggerSwitch, INPUT_PULLUP);
-    triggerSwitch.interval(debounceTime);
+    triggerSwitch.interval(debounceTime_ms);
     triggerSwitch.setPressedState(triggerSwitchNormallyClosed);
   }
   if (pins.cycleSwitch) {
     cycleSwitch.attach(pins.cycleSwitch, INPUT_PULLUP);
-    cycleSwitch.interval(debounceTime);
+    cycleSwitch.interval(debounceTime_ms);
     cycleSwitch.setPressedState(cycleSwitchNormallyClosed);
   }
 
