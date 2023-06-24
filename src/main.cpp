@@ -19,7 +19,7 @@ uint32_t pusherTimer_ms = 0;
 uint32_t zeroRPM[4] = {0, 0, 0, 0};
 uint32_t (*targetRPM)[4]; // a pointer to a uint32_t[4] array. always points to either revRPM, idleRPM, or zeroRPM
 uint32_t throttleValue[4] = {0, 0, 0, 0}; // scale is 0 - 1999
-uint16_t shotsToFire = 0;
+int16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
 bool closedLoopFlywheels = false;
@@ -120,7 +120,7 @@ void loop() {
     }
   } else if (triggerSwitch.released()) {
     if (bufferMode == 0) {
-      shotsToFire = 0;
+      shotsToFire = 1;
     }
   }
 
@@ -168,7 +168,7 @@ void loop() {
               pusherTimer_ms = time_ms;
             } else if (firing && cycleSwitch.pressed()) {
               shotsToFire = shotsToFire - 1;
-              if (shotsToFire == 0 ) {  // brake pusher
+              if (shotsToFire <= 0 ) {  // brake pusher
                 pusher->brake();
                 firing = false;
               }
