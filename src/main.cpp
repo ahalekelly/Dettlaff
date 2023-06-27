@@ -92,6 +92,10 @@ void setup() {
     for (int i = 0; i < numMotors; i++) {
       dshot[i].begin(dshotMode, false); // bitrate & bidirectional
     }
+    delay(100);
+    for (int i = 0; i < numMotors; i++) {
+      dshot[i].send_dshot_value(48, NO_TELEMETRIC); // make sure blheli ESCs boot properly
+    }
   }
 }
 
@@ -216,10 +220,21 @@ void loop() {
   if (dshotMode == DSHOT_OFF) {
     for (int i = 0; i < numMotors; i++) {
       servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
+      /*
+      Serial.print((*targetRPM)[i]);
+      Serial.print(" ");
+      Serial.print(throttleValue[i] / 2 + 1000);
+      Serial.print(" ");
+      */
     }
+//    Serial.println("");
   } else {
     for (int i = 0; i < numMotors; i++) {
-      dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
+      if (throttleValue[i] == 0) {
+        dshot[i].send_dshot_value(0, NO_TELEMETRIC);
+      } else {
+        dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
+      }
     }
   }
   ArduinoOTA.handle();
