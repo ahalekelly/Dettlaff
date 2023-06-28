@@ -95,7 +95,9 @@ void setup() {
     delay(100);
     for (int i = 0; i < numMotors; i++) {
       dshot[i].send_dshot_value(48, NO_TELEMETRIC); // make sure blheli ESCs boot properly
+      dshot[i].send_dshot_value(0, NO_TELEMETRIC);
     }
+    delay(100);
   }
 }
 
@@ -230,11 +232,11 @@ void loop() {
 //    Serial.println("");
   } else {
     for (int i = 0; i < numMotors; i++) {
-      if (throttleValue[i] == 0) {
-        dshot[i].send_dshot_value(0, NO_TELEMETRIC);
-      } else {
+//      if (throttleValue[i] == 0) {
+//        dshot[i].send_dshot_value(0, NO_TELEMETRIC);
+//      } else {
         dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
-      }
+//      }
     }
   }
   ArduinoOTA.handle();
