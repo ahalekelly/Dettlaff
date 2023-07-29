@@ -32,10 +32,13 @@ uint8_t bufferMode = 1;
 // 1 = complete current burst when trigger is released
 // 2 = fire as many bursts as trigger pulls
 // for full auto, set burstLength high (50+) and bufferMode = 0
-uint16_t firingDelay_ms = 200; // delay to allow flywheels to spin up before firing dart
+uint16_t firingDelay_ms = 100; // delay to allow flywheels to spin up before firing dart
 uint16_t solenoidExtendTime_ms = 20;
 uint16_t solenoidRetractTime_ms = 35;
-bool pusherReverseDirection = false;
+bool pusherReverseDirection = true;
+uint8_t pusherReversePolarityDuration_ms = 10;
+bool pusherReverseOnOverrun = false;
+bool pusherEndReverseBrakingEarly = false;
 
 // Advanced Settings
 uint16_t pusherStallTime_ms = 1000; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?

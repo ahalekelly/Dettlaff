@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
-#define BOUNCE_LOCK_OUT // improves trigger responsiveness at the risk of spurious signals from noise
 #include "Bounce2.h"
 #include "DShotRMT.h"
 #include "ESP32Servo.h"
@@ -22,6 +21,7 @@ uint32_t throttleValue[4] = {0, 0, 0, 0}; // scale is 0 - 1999
 int16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
+bool reverseBraking = false;
 bool closedLoopFlywheels = false;
 uint32_t scaledMotorKv = motorKv * 11; // motor kv * battery voltage resistor divider ratio
 const uint32_t maxThrottle = 1999;
@@ -133,7 +133,7 @@ void loop() {
   switch (flywheelState){
 
     case STATE_IDLE:
-      if (triggerSwitch.isPressed() || revSwitch.isPressed()) {
+      if (triggerSwitch.pressed() || revSwitch.isPressed()) {
         targetRPM = &revRPM;
         lastRevTime_ms = time_ms;
         flywheelState = STATE_ACCELERATING;
@@ -172,17 +172,51 @@ void loop() {
               pusher->drive(100, pusherReverseDirection);
               firing = true;
               pusherTimer_ms = time_ms;
-            } else if (firing && cycleSwitch.pressed()) {
+            } else if (firing && cycleSwitch.pressed()) { // when the pusher reaches rear position
               shotsToFire = shotsToFire - 1;
-              if (shotsToFire <= 0 ) {  // brake pusher
-                pusher->brake();
-                firing = false;
-              }
               pusherTimer_ms = time_ms;
+              if (shotsToFire <= 0 ) {  // brake pusher
+                Serial.println("braking started, now idling");
+                if (pusherReversePolarityDuration_ms > 0) {
+                  Serial.println("reverse braking started");
+                  pusher->drive(100, !pusherReverseDirection); // drive motor backwards to stop faster
+                  reverseBraking = true;
+//                  firing = false; this doesn't work because this pusher control routine only runs when the flywheels are running, so this causes reverse braking to never end. refactor later?
+                } else {
+                  pusher->brake();
+                  firing = false;
+                  flywheelState = STATE_IDLE; // check later
+                }
+              }
+            } else if (reverseBraking) { // if we're currently doing reverse braking
+              if (cycleSwitch.released() && pusherEndReverseBrakingEarly) {
+                Serial.println("Cycle switch released during reverse braking");
+                pusher->brake();
+                reverseBraking = false;
+                firing = false;
+                flywheelState = STATE_IDLE; // check later
+              } else if (cycleSwitch.pressed()) {
+                Serial.println("Cycle switch pressed during reverse braking");
+                pusher->brake();
+                reverseBraking = false;
+                firing = false;
+                flywheelState = STATE_IDLE; // check later
+              } else if (time_ms > pusherTimer_ms + pusherReversePolarityDuration_ms) {
+                Serial.println("pusherReverse end of duration");
+                pusher->brake();
+                reverseBraking = false;
+                firing = false;
+                flywheelState = STATE_IDLE; // check later
+              }
+            } else if (!firing && cycleSwitch.released() && pusherReverseOnOverrun) {
+                Serial.println("pusherReverseOnOverrun");
+                pusher->drive(100, !pusherReverseDirection); // drive motor backwards to stop faster
+                reverseBraking = true;
             } else if (firing && time_ms > pusherTimer_ms + pusherStallTime_ms) { // stall protection
               pusher->coast();
               shotsToFire = 0;
               firing = false;
+              flywheelState = STATE_IDLE; // check later
               Serial.println("Pusher motor stalled!");
             }
             break;
@@ -197,6 +231,7 @@ void loop() {
             } else if (firing && time_ms > pusherTimer_ms + solenoidExtendTime_ms) { // retract solenoid
               pusher->coast();
               firing = false;
+              flywheelState = STATE_IDLE; // check later
               pusherTimer_ms = time_ms;
               Serial.println("solenoid retracting");
             }
@@ -232,11 +267,11 @@ void loop() {
 //    Serial.println("");
   } else {
     for (int i = 0; i < numMotors; i++) {
-//      if (throttleValue[i] == 0) {
-//        dshot[i].send_dshot_value(0, NO_TELEMETRIC);
-//      } else {
+      if (throttleValue[i] == 0) {
+        dshot[i].send_dshot_value(0, NO_TELEMETRIC);
+      } else {
         dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
-//      }
+      }
     }
   }
   ArduinoOTA.handle();
