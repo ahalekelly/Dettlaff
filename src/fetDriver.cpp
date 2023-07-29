@@ -1,18 +1,24 @@
 #include "fetDriver.h"
 
-Fet::Fet(uint8_t fetPin) {
-        m_pin = fetPin;
-        pinMode(m_pin, OUTPUT);
-    }
+Fet::Fet(uint8_t fetPin)
+{
+    m_pin = fetPin;
+    pinMode(m_pin, OUTPUT);
+}
 
-void Fet::drive(float dutyCycle, bool reverseDirection) { // both parameters are ignored
+// both parameters are ignored
+void Fet::drive(float dutyCycle, bool reverseDirection)
+{
     digitalWrite(m_pin, HIGH);
 }
 
-void Fet::coast() {
+void Fet::coast()
+{
     digitalWrite(m_pin, LOW);
 }
 
-void Fet::brake() { // cannot actually brake with only 1 FET, coast instead
+// cannot actually brake with only 1 FET, coast instead
+void Fet::brake()
+{
     digitalWrite(m_pin, LOW);
 }

@@ -3,22 +3,22 @@
 #include <Arduino.h>
 
 enum flywheelState_t {
-  STATE_IDLE,
-  STATE_ACCELERATING, // ACCELERATING = wheels not yet at full speed
-  STATE_FULLSPEED, // REV = wheels at full speed
+    STATE_IDLE,
+    STATE_ACCELERATING, // ACCELERATING = wheels not yet at full speed
+    STATE_FULLSPEED, // REV = wheels at full speed
 };
 
 enum pusherType_t {
-  NO_PUSHER,
-  PUSHER_MOTOR_CLOSEDLOOP,
-  PUSHER_SOLENOID_OPENLOOP,
+    NO_PUSHER,
+    PUSHER_MOTOR_CLOSEDLOOP,
+    PUSHER_SOLENOID_OPENLOOP,
 };
 
 enum pusherDriverType_t {
-  NO_DRIVER,
-  FET_DRIVER,
-  AT8870_DRIVER,
-  HBRIDGE_DRIVER,
+    NO_DRIVER,
+    FET_DRIVER,
+    AT8870_DRIVER,
+    HBRIDGE_DRIVER,
 };
 
 typedef struct {

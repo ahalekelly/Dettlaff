@@ -1,6 +1,7 @@
 #include "hBridgeDriver.h"
 
-Hbridge::Hbridge(uint8_t pin1H, uint8_t pin1L, uint8_t pin2H, uint8_t pin2L, float maxDutyCycle, uint32_t pwmFreq, uint8_t deadTime) {
+Hbridge::Hbridge(uint8_t pin1H, uint8_t pin1L, uint8_t pin2H, uint8_t pin2L, float maxDutyCycle, uint32_t pwmFreq, uint8_t deadTime)
+{
     m_maxDutyCycle = maxDutyCycle;
     m_pwmFreq = pwmFreq;
     m_deadTime = deadTime;
@@ -29,7 +30,8 @@ Hbridge::Hbridge(uint8_t pin1H, uint8_t pin1L, uint8_t pin2H, uint8_t pin2L, flo
     ESP_ERROR_CHECK(mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM_GEN_A, 0));
 }
 
-void Hbridge::enableDeadTime() {
+void Hbridge::enableDeadTime()
+{
     if (!m_deadTimeEnabled0) {
         ESP_ERROR_CHECK(mcpwm_deadtime_enable(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_ACTIVE_HIGH_COMPLIMENT_MODE, m_deadTime, m_deadTime));
         m_deadTimeEnabled0 = true;
@@ -40,23 +42,26 @@ void Hbridge::enableDeadTime() {
     }
 }
 
-void Hbridge::drive(float dutyCycle, bool reverseDirection) {
+void Hbridge::drive(float dutyCycle, bool reverseDirection)
+{
     m_reverseDirection = reverseDirection;
     Hbridge::enableDeadTime();
     ESP_ERROR_CHECK(mcpwm_set_duty(MCPWM_UNIT_0, m_reverseDirection ? MCPWM_TIMER_0 : MCPWM_TIMER_1, MCPWM_GEN_A, 0));
     ESP_ERROR_CHECK(mcpwm_set_duty(MCPWM_UNIT_0, m_reverseDirection ? MCPWM_TIMER_1 : MCPWM_TIMER_0, MCPWM_GEN_A, min(dutyCycle, m_maxDutyCycle)));
 }
 
-void Hbridge::brake() {
+void Hbridge::brake()
+{
     Hbridge::enableDeadTime();
     ESP_ERROR_CHECK(mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_GEN_A, 0));
     ESP_ERROR_CHECK(mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM_GEN_A, 0));
 }
 
-void Hbridge::coast() {
+void Hbridge::coast()
+{
     ESP_ERROR_CHECK(mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_GEN_A, 0));
     ESP_ERROR_CHECK(mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM_GEN_A, 0));
-    if(m_reverseDirection) { // TIMER0 was negative side, let it float high with indcutive spike so solenoid decays quickly
+    if (m_reverseDirection) { // TIMER0 was negative side, let it float high with indcutive spike so solenoid decays quickly
         ESP_ERROR_CHECK(mcpwm_deadtime_disable(MCPWM_UNIT_0, MCPWM_TIMER_0));
         m_deadTimeEnabled0 = false;
     } else {

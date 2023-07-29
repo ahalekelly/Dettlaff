@@ -1,5 +1,5 @@
-#include <Arduino.h>
 #include "driver.h"
+#include <Arduino.h>
 
 class Fet : public Driver {
 public:
