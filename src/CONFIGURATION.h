@@ -1,3 +1,4 @@
+#include "DShotRMT.h" // We need this for the dshot modes
 #include "boards_config.h" // board pinouts are in this file. you can check and modify which switch is on which pin there.
 
 // Flywheel Settings
