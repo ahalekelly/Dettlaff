@@ -256,6 +256,7 @@ void WiFiInit() {
     Serial.println("WiFi Connection Failed!");
     WiFi.mode(WIFI_AP);
     WiFi.softAP(AP_SSID, AP_PW);
+    ArduinoOTA.setHostname("Dettlaff");
   } else {
     Serial.print("WiFi Connected ");
     Serial.println(wifiSsid);
