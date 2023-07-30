@@ -15,9 +15,17 @@ uint16_t loopTime_us = targetLoopTime_us;
 uint32_t time_ms = millis();
 uint32_t lastRevTime_ms = 0; // for calculating idling
 uint32_t pusherTimer_ms = 0;
+uint32_t revRPM[4]; // stores value from revRPMSet on boot for current firing mode
+uint32_t idleRPM[4]; // stores value from idleRPMSet on boot for current firing mode
+uint32_t idleTime_ms; // stores value from idleTimeSet_ms on boot for current firing mode
+uint16_t firingDelay_ms; // stores value from firingDelaySet_ms on boot for current firing mode
 uint32_t zeroRPM[4] = { 0, 0, 0, 0 };
 uint32_t (*targetRPM)[4]; // a pointer to a uint32_t[4] array. always points to either revRPM, idleRPM, or zeroRPM
+uint32_t firingRPM[4];
 uint32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
+uint16_t burstLength; // stores value from burstLengthSet for current firing mode
+uint8_t bufferMode; // stores value from bufferModeSet for current firing mode
+int8_t firingMode; // stores value from firingModeSet for current firing mode
 int16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
@@ -32,6 +40,8 @@ Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
 Bounce2::Button cycleSwitch = Bounce2::Button();
 Bounce2::Button button = Bounce2::Button();
+Bounce2::Button select1 = Bounce2::Button();
+Bounce2::Button select2 = Bounce2::Button();
 
 // Declare servo variables for each motor.
 Servo servo[4];
@@ -81,6 +91,16 @@ void setup()
         cycleSwitch.interval(debounceTime_ms);
         cycleSwitch.setPressedState(cycleSwitchNormallyClosed);
     }
+    if (pins.select1) {
+        select1.attach(pins.select1, INPUT_PULLUP);
+        select1.interval(debounceTime_ms);
+        select1.setPressedState(false);
+    }
+    if (pins.select2) {
+        select2.attach(pins.select2, INPUT_PULLUP);
+        select2.interval(debounceTime_ms);
+        select2.setPressedState(false);
+    }
 
     if (dshotMode == DSHOT_OFF) {
         for (int i = 0; i < 4; i++) {
@@ -102,6 +122,30 @@ void setup()
         }
         delay(100);
     }
+    //set firingMode
+    if (pins.select1) {
+        select1.update();
+    }
+    if (pins.select2) {
+        select2.update();
+    }
+    if(select1.isPressed()){
+        firingMode = 0;
+    }
+    else if(select2.isPressed()){
+        firingMode = 2;
+    }
+    else {
+    firingMode = 1;
+    }
+    //changeFPS on boot by firing mode
+    for (int i = 0; i<numMotors; i++){
+        revRPM[i] = revRPMset[firingMode][i/2];
+        idleRPM[i] = idleRPMset[firingMode][i/2];
+        firingRPM[i] = revRPM[i]*0.9;
+    }
+    idleTime_ms = idleTimeSet_ms[firingMode];
+    firingDelay_ms = firingDelaySet_ms[firingMode];
 }
 
 void loop()
@@ -114,7 +158,26 @@ void loop()
     if (pins.triggerSwitch) {
         triggerSwitch.update();
     }
-
+    if (pins.select1) {
+        select1.update();
+    }
+    if (pins.select2) {
+        select2.update();
+    }
+    //set firingMode from selector switch
+    if(select1.isPressed()){
+        firingMode = 0;
+    }
+    else if(select2.isPressed()){
+        firingMode = 2;
+    }
+    else {
+        firingMode = 1;
+    }
+    //changes burst options
+    burstLength = burstLengthSet[firingMode];
+    bufferMode = BufferModeSet[firingMode];
+    
     // *Need to implement*
     // Get flywheel RPM data, store it in motorRPM
 

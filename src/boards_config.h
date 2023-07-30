@@ -3,8 +3,10 @@
 const pins_t pins_v0_5 = {
     .pusherDriverType = HBRIDGE_DRIVER,
     .revSwitch = 15,
-    .triggerSwitch = 33,
-    .cycleSwitch = 25,
+    .triggerSwitch = 32,
+    .cycleSwitch = 23,
+    .select1 = 25,
+    .select2 = 33,
     .flywheel = 2,
     .pusher1L = 14,
     .pusher2L = 27,
