@@ -12,6 +12,7 @@ dshot_mode_t dshotMode = DSHOT150; // DSHOT150 for dshot, or DSHOT_OFF to fall b
 // Dettlaff Settings
 char wifiSsid[32] = "network name";
 char wifiPass[63] = "password";
+uint32_t wifiDuration_ms = 10 * 60 * 1000; // how long before wifi turns off to save power. default is 10 min
 
 pins_t pins = pins_v0_5; // select the one that matches your board revision
 // Options:

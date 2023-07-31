@@ -9,6 +9,7 @@
 #include "types.h"
 #include <Arduino.h>
 #include <ArduinoOTA.h>
+#include <esp_wifi.h>
 
 uint32_t loopStartTimer_us = micros();
 uint16_t loopTime_us = targetLoopTime_us;
@@ -27,6 +28,7 @@ uint32_t scaledMotorKv = motorKv * 11; // motor kv * battery voltage resistor di
 const uint32_t maxThrottle = 1999;
 uint32_t motorRPM[4] = { 0, 0, 0, 0 };
 Driver* pusher;
+bool wifiState = false;
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
@@ -276,7 +278,14 @@ void loop()
             }
         }
     }
-    ArduinoOTA.handle();
+    if (wifiState == true) {
+        if (time_ms > wifiDuration_ms) {
+            wifiState = false;
+            Serial.println("Wifi turning off");
+        } else {
+            ArduinoOTA.handle();
+        }
+    }
     loopTime_us = micros() - loopStartTimer_us; // 'us' is microseconds
     if (loopTime_us > targetLoopTime_us) {
         Serial.print("loop over time, ");
@@ -288,6 +297,7 @@ void loop()
 
 void WiFiInit()
 {
+    wifiState = true;
     WiFi.mode(WIFI_STA);
     WiFi.begin(wifiSsid, wifiPass);
     if (WiFi.waitForConnectResult() != WL_CONNECTED) {
