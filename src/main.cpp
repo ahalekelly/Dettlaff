@@ -19,6 +19,7 @@ uint32_t pusherTimer_ms = 0;
 uint32_t zeroRPM[4] = { 0, 0, 0, 0 };
 uint32_t (*targetRPM)[4]; // a pointer to a uint32_t[4] array. always points to either revRPM, idleRPM, or zeroRPM
 uint32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
+uint32_t dshotValue = 0;
 int16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
@@ -281,13 +282,15 @@ void loop()
         //    Serial.println("");
     } else {
         for (int i = 0; i < numMotors; i++) {
-            if (throttleValue[i] != 0 || blheli_esc) { // AM32 needs throttle value of 0 to arm?
-                throttleValue[i] += 48;
+            if (throttleValue == 0 && am32ESC) {
+                dshotValue = throttleValue[i];
+            } else {
+                dshotValue = throttleValue[i] + 48;
             }
             if (i == telemMotorNum) {
-                dshot[i].send_dshot_value(throttleValue[i], ENABLE_TELEMETRIC); // is there a way to have dshot library only send one telemetric packet? doesn't seem like it
+                dshot[i].send_dshot_value(dshotValue, ENABLE_TELEMETRIC); // is there a way to have dshot library only send one telemetric packet? doesn't seem like it
             } else {
-                dshot[i].send_dshot_value(throttleValue[i], NO_TELEMETRIC);
+                dshot[i].send_dshot_value(dshotValue, NO_TELEMETRIC);
             }
         }
     }
