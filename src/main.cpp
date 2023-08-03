@@ -128,7 +128,7 @@ void loop()
     }
     // Then parse serial buffer, if serial buffer contains complete packet then update motorRPM value, clear serial buffer, and increment telemMotorNum to get the data for the next motor
     // will we be able to detect the gaps between packets to know when a packet is complete? Need to test and see
-    Serial.println(telemBuffer);
+    //    Serial.println(telemBuffer);
 
     if (triggerSwitch.pressed()) { // pressed and released are transitions, isPressed is for state
         if (bufferMode == 0) {
