@@ -60,6 +60,7 @@ void setup()
     switch (pins.pusherDriverType) {
     case HBRIDGE_DRIVER:
         pusher = new Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, maxDutyCycle_pct, pwmFreq_hz, deadtime);
+        pusher->coast();
         break;
     case AT8870_DRIVER:
         pusher = new At8870(pins.pusher1L, pins.pusher2L, pwmFreq_hz);
