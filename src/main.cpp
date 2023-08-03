@@ -55,7 +55,6 @@ void setup()
         pinMode(pins.flywheel, OUTPUT);
         digitalWrite(pins.flywheel, HIGH);
     }
-    WiFiInit();
 
     switch (pins.pusherDriverType) {
     case HBRIDGE_DRIVER:
@@ -104,13 +103,18 @@ void setup()
         for (int i = 0; i < numMotors; i++) {
             dshot[i].begin(dshotMode, false); // bitrate & bidirectional
         }
-        delay(100);
+        delay(10);
         for (int i = 0; i < numMotors; i++) {
-            dshot[i].send_dshot_value(48, NO_TELEMETRIC); // make sure blheli ESCs boot properly
-            dshot[i].send_dshot_value(0, NO_TELEMETRIC);
+            if (am32ESC) {
+                dshot[i].send_dshot_value(0, NO_TELEMETRIC);
+            } else {
+                dshot[i].send_dshot_value(48, NO_TELEMETRIC);
+            }
         }
-        delay(100);
+        delay(10);
     }
+
+    WiFiInit();
 }
 
 void loop()
@@ -283,8 +287,8 @@ void loop()
         //    Serial.println("");
     } else {
         for (int i = 0; i < numMotors; i++) {
-            if (throttleValue == 0 && am32ESC) {
-                dshotValue = throttleValue[i];
+            if (throttleValue[i] == 0 && am32ESC) {
+                dshotValue = 0;
             } else {
                 dshotValue = throttleValue[i] + 48;
             }
