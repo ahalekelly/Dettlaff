@@ -31,7 +31,7 @@ uint32_t motorRPM[4] = { 0, 0, 0, 0 };
 Driver* pusher;
 bool wifiState = false;
 String telemBuffer = "";
-uint8_t telemMotorNum = 0; // 0-3
+int8_t telemMotorNum = -1; // 0-3
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
@@ -286,7 +286,7 @@ void loop()
         }
         //    Serial.println("");
     } else {
-        for (int i = 0; i < numMotors; i++) {
+        for (int8_t i = 0; i < numMotors; i++) {
             if (throttleValue[i] == 0 && am32ESC) {
                 dshotValue = 0;
             } else {
