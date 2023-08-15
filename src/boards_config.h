@@ -3,8 +3,8 @@
 const pins_t pins_v0_5 = {
     .pusherDriverType = HBRIDGE_DRIVER,
     .revSwitch = 15,
-    .triggerSwitch = 33,
-    .cycleSwitch = 25,
+    .triggerSwitch = 32,
+    .cycleSwitch = 23,
     .flywheel = 2,
     .pusher1L = 14,
     .pusher2L = 27,
@@ -18,6 +18,8 @@ const pins_t pins_v0_5 = {
     .button = 0,
     .batteryADC = 35,
 };
+
+const pins_t pins_v0_6 = pins_v0_5;
 
 const pins_t pins_v0_4_n20 = {
     .pusherDriverType = AT8870_DRIVER,
