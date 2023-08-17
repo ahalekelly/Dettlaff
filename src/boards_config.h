@@ -1,5 +1,24 @@
 #include "types.h"
 
+const pins_t pins_v0_7 = {
+    .pusherDriverType = DRV_DRIVER,
+    .pusherCoastHigh = true,
+    .nSleep = 27,
+    .revSwitch = 15,
+    .triggerSwitch = 32,
+    .cycleSwitch = 23,
+    .flywheel = 2,
+    .pusher1L = 12,
+    .pusher2L = 13,
+    .esc1 = 19,
+    .esc2 = 18,
+    .esc3 = 5,
+    .esc4 = 17,
+    .telem = 16,
+    .button = 0,
+    .batteryADC = 35,
+};
+
 const pins_t pins_v0_5 = {
     .pusherDriverType = HBRIDGE_DRIVER,
     .revSwitch = 15,
@@ -22,7 +41,8 @@ const pins_t pins_v0_5 = {
 const pins_t pins_v0_6 = pins_v0_5;
 
 const pins_t pins_v0_4_n20 = {
-    .pusherDriverType = AT8870_DRIVER,
+    .pusherDriverType = DRV_DRIVER,
+    .pusherCoastHigh = false,
     .revSwitch = 15,
     .triggerSwitch = 32,
     .cycleSwitch = 23,
@@ -53,7 +73,8 @@ const pins_t pins_v0_4_noid = {
 };
 
 const pins_t pins_v0_3_n20 = {
-    .pusherDriverType = AT8870_DRIVER,
+    .pusherDriverType = DRV_DRIVER,
+    .pusherCoastHigh = false,
     .revSwitch = 15,
     .triggerSwitch = 32,
     .cycleSwitch = 23,

@@ -15,8 +15,10 @@ char wifiSsid[32] = "network name";
 char wifiPass[63] = "password";
 uint32_t wifiDuration_ms = 10 * 60 * 1000; // how long before wifi turns off to save power. default is 10 min
 
-pins_t pins = pins_v0_5; // select the one that matches your board revision
+pins_t pins = pins_v0_7; // select the one that matches your board revision
 // Options:
+// pins_v0_7
+// pins_v0_6
 // pins_v0_5
 // pins_v0_4_n20
 // pins_v0_4_noid
@@ -38,7 +40,7 @@ uint8_t bufferMode = 1;
 uint16_t firingDelay_ms = 100; // delay to allow flywheels to spin up before firing dart
 uint16_t solenoidExtendTime_ms = 20;
 uint16_t solenoidRetractTime_ms = 35;
-bool pusherReverseDirection = false; // make motor spin backwards? v0.5 & v0.6 (hBridgeDriver) need this to be false or the pusher logic is inverted. the earlier at8870Driver pusher seems to need this to be true for reverse polarity braking to work?
+bool pusherReverseDirection = false; // make motor spin backwards? v0.5 & v0.6 (hBridgeDriver) need this to be false or the pusher logic is inverted? and the v0.2 - v0.4 at8870 pusher seems to need this to be true for reverse polarity braking to work?
 uint8_t pusherReversePolarityDuration_ms = 10;
 bool pusherReverseOnOverrun = false;
 bool pusherEndReverseBrakingEarly = false;
@@ -59,3 +61,4 @@ uint32_t firingRPM[4] = { revRPM[0] * 9 / 10, revRPM[1] * 9 / 10, revRPM[2] * 9 
 float maxDutyCycle_pct = 98;
 uint8_t deadtime = 10;
 uint16_t pwmFreq_hz = 20000;
+uint16_t servoFreq_hz = 200;

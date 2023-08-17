@@ -2,8 +2,8 @@
 #include "CONFIGURATION.h"
 #include "DShotRMT.h"
 #include "ESP32Servo.h"
-#include "at8870Driver.h"
 #include "driver.h"
+#include "drvDriver.h"
 #include "fetDriver.h"
 #include "hBridgeDriver.h"
 #include "types.h"
@@ -55,14 +55,18 @@ void setup()
         pinMode(pins.flywheel, OUTPUT);
         digitalWrite(pins.flywheel, HIGH);
     }
+    if (pins.nSleep) {
+        pinMode(pins.nSleep, OUTPUT);
+        digitalWrite(pins.nSleep, HIGH);
+    }
 
     switch (pins.pusherDriverType) {
     case HBRIDGE_DRIVER:
         pusher = new Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, maxDutyCycle_pct, pwmFreq_hz, deadtime);
         pusher->coast();
         break;
-    case AT8870_DRIVER:
-        pusher = new At8870(pins.pusher1L, pins.pusher2L, pwmFreq_hz);
+    case DRV_DRIVER:
+        pusher = new Drv(pins.pusher1L, pins.pusher2L, pwmFreq_hz, pins.pusherCoastHigh);
         break;
     case FET_DRIVER:
         pusher = new Fet(pins.pusher1H);
@@ -93,7 +97,7 @@ void setup()
     if (dshotMode == DSHOT_OFF) {
         for (int i = 0; i < 4; i++) {
             ESP32PWM::allocateTimer(i);
-            servo[i].setPeriodHertz(200);
+            servo[i].setPeriodHertz(servoFreq_hz);
         }
         servo[1].attach(pins.esc1);
         servo[2].attach(pins.esc2);
@@ -112,6 +116,12 @@ void setup()
             }
         }
         delay(10);
+    }
+
+    if (pins.nSleep) {
+        digitalWrite(pins.nSleep, LOW);
+        delayMicroseconds(30);
+        digitalWrite(pins.nSleep, HIGH);
     }
 
     WiFiInit();
@@ -195,9 +205,7 @@ void loop()
                     shotsToFire = shotsToFire - 1;
                     pusherTimer_ms = time_ms;
                     if (shotsToFire <= 0) { // brake pusher
-                        Serial.println("braking started, now idling");
                         if (pusherReversePolarityDuration_ms > 0) {
-                            Serial.println("reverse braking started");
                             pusher->drive(100, !pusherReverseDirection); // drive motor backwards to stop faster
                             reverseBraking = true;
                             //                  firing = false; this doesn't work because this pusher control routine only runs when the flywheels are running, so this causes reverse braking to never end. refactor later?

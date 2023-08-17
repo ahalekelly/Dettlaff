@@ -17,12 +17,14 @@ enum pusherType_t {
 enum pusherDriverType_t {
     NO_DRIVER,
     FET_DRIVER,
-    AT8870_DRIVER,
+    DRV_DRIVER,
     HBRIDGE_DRIVER,
 };
 
 typedef struct {
     pusherDriverType_t pusherDriverType;
+    bool pusherCoastHigh;
+    int8_t nSleep;
     int8_t revSwitch;
     int8_t triggerSwitch;
     int8_t cycleSwitch;
