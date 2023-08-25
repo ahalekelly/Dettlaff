@@ -32,6 +32,8 @@ Driver* pusher;
 bool wifiState = false;
 String telemBuffer = "";
 int8_t telemMotorNum = -1; // 0-3
+uint16_t tempRPM = 0;
+uint32_t triggerTime_us = 0;
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
@@ -162,6 +164,7 @@ void loop()
 
     case STATE_IDLE:
         if (triggerSwitch.pressed() || revSwitch.isPressed()) {
+            triggerTime_us = loopStartTimer_us;
             targetRPM = &revRPM;
             lastRevTime_ms = time_ms;
             flywheelState = STATE_ACCELERATING;
@@ -290,7 +293,17 @@ void loop()
         }
         //    Serial.println("");
     } else {
+        Serial.print(loopStartTimer_us - triggerTime_us);
+        Serial.print(" ");
+        Serial.print(throttleValue[0]);
+        Serial.print(" ");
         for (int8_t i = 0; i < numMotors; i++) {
+            tempRPM = dshot[i].get_dshot_RPM();
+            if (tempRPM > 0) {
+                motorRPM[i] = tempRPM;
+            }
+            Serial.print(tempRPM);
+            Serial.print(" ");
             if (throttleValue[i] == 0) {
                 dshotValue = 0;
             } else {
@@ -302,6 +315,7 @@ void loop()
                 dshot[i].send_dshot_value(dshotValue, NO_TELEMETRIC);
             }
         }
+        Serial.println();
     }
     if (wifiState == true) {
         if (time_ms > wifiDuration_ms) {
@@ -313,8 +327,9 @@ void loop()
     }
     loopTime_us = micros() - loopStartTimer_us; // 'us' is microseconds
     if (loopTime_us > targetLoopTime_us) {
-        Serial.print("loop over time, ");
-        Serial.println(loopTime_us);
+        ;
+        // Serial.print("loop over time, ");
+        // Serial.println(loopTime_us);
     } else {
         delayMicroseconds(max((long)(0), (long)(targetLoopTime_us - loopTime_us)));
     }
