@@ -41,8 +41,8 @@ Bounce2::Button button = Bounce2::Button();
 // Declare servo variables for each motor.
 Servo servo[4];
 DShotRMT dshot[4] = {
-    DShotRMT(pins.esc1, RMT_CHANNEL_1), DShotRMT(pins.esc2, RMT_CHANNEL_2),
-    DShotRMT(pins.esc3, RMT_CHANNEL_3), DShotRMT(pins.esc4, RMT_CHANNEL_4)
+    DShotRMT(pins.esc1), DShotRMT(pins.esc2),
+    DShotRMT(pins.esc3), DShotRMT(pins.esc4)
 };
 
 void WiFiInit();
@@ -105,15 +105,11 @@ void setup()
         servo[4].attach(pins.esc4);
     } else {
         for (int i = 0; i < numMotors; i++) {
-            dshot[i].begin(dshotMode, false); // bitrate & bidirectional
+            dshot[i].begin(dshotMode, ENABLE_BIDIRECTION, 14);
         }
         delay(10);
         for (int i = 0; i < numMotors; i++) {
-            if (am32ESC) {
-                dshot[i].send_dshot_value(0, NO_TELEMETRIC);
-            } else {
-                dshot[i].send_dshot_value(48, NO_TELEMETRIC);
-            }
+            dshot[i].send_dshot_value(0, NO_TELEMETRIC);
         }
         delay(10);
     }
@@ -295,7 +291,7 @@ void loop()
         //    Serial.println("");
     } else {
         for (int8_t i = 0; i < numMotors; i++) {
-            if (throttleValue[i] == 0 && am32ESC) {
+            if (throttleValue[i] == 0) {
                 dshotValue = 0;
             } else {
                 dshotValue = throttleValue[i] + 48;

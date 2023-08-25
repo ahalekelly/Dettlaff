@@ -7,8 +7,7 @@ uint32_t idleRPM[4] = { 1000, 1000, 1000, 1000 };
 uint32_t idleTime_ms = 60000; // how long to idle the flywheels for after releasing the trigger, in milliseconds
 uint32_t motorKv = 3200;
 uint32_t batteryADC_mv = 14800 / 11; // battery voltage in mv divided by voltage divider ratio (11)
-dshot_mode_t dshotMode = DSHOT150; // DSHOT150 for dshot, or DSHOT_OFF to fall back to servo PWM
-bool am32ESC = false;
+dshot_mode_t dshotMode = DSHOT300; // DSHOT150 for dshot, or DSHOT_OFF to fall back to servo PWM
 
 // Dettlaff Settings
 char wifiSsid[32] = "network name";
