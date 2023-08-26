@@ -267,7 +267,33 @@ void loop()
         break;
     }
 
+    // calculate throttleValue
     if (closedLoopFlywheels) {
+        // temporary copy of open loop calculation
+        for (int i = 0; i < numMotors; i++) {
+            if (throttleValue[i] == 0) {
+                throttleValue[i] = min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryADC_mv * 1000 / scaledMotorKv);
+            } else {
+                throttleValue[i] = max(min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryADC_mv * 1000 / scaledMotorKv),
+                    throttleValue[i] - spindownSpeed);
+            }
+        }
+
+        // get rpm via bidirectional dshot
+        Serial.print(loopStartTimer_us - triggerTime_us);
+        Serial.print(" ");
+        Serial.print(throttleValue[0]);
+        Serial.print(" ");
+        for (int8_t i = 0; i < numMotors; i++) {
+            tempRPM = dshot[i].get_dshot_RPM();
+            if (tempRPM > 0) {
+                motorRPM[i] = tempRPM;
+            }
+            Serial.print(tempRPM);
+            Serial.print(" ");
+        }
+        Serial.println();
+
         // PID control code goes here
     } else { // open loop case
         for (int i = 0; i < numMotors; i++) {
@@ -284,26 +310,9 @@ void loop()
     if (dshotMode == DSHOT_OFF) {
         for (int i = 0; i < numMotors; i++) {
             servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
-            /*
-            Serial.print((*targetRPM)[i]);
-            Serial.print(" ");
-            Serial.print(throttleValue[i] / 2 + 1000);
-            Serial.print(" ");
-            */
         }
-        //    Serial.println("");
     } else {
-        Serial.print(loopStartTimer_us - triggerTime_us);
-        Serial.print(" ");
-        Serial.print(throttleValue[0]);
-        Serial.print(" ");
         for (int8_t i = 0; i < numMotors; i++) {
-            tempRPM = dshot[i].get_dshot_RPM();
-            if (tempRPM > 0) {
-                motorRPM[i] = tempRPM;
-            }
-            Serial.print(tempRPM);
-            Serial.print(" ");
             if (throttleValue[i] == 0) {
                 dshotValue = 0;
             } else {
@@ -315,7 +324,6 @@ void loop()
                 dshot[i].send_dshot_value(dshotValue, NO_TELEMETRIC);
             }
         }
-        Serial.println();
     }
     if (wifiState == true) {
         if (time_ms > wifiDuration_ms || flywheelState != STATE_IDLE) {
