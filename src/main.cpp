@@ -318,9 +318,11 @@ void loop()
         Serial.println();
     }
     if (wifiState == true) {
-        if (time_ms > wifiDuration_ms) {
+        if (time_ms > wifiDuration_ms || flywheelState != STATE_IDLE) {
             wifiState = false;
             Serial.println("Wifi turning off");
+            WiFi.disconnect(true);
+            WiFi.mode(WIFI_OFF);
         } else {
             ArduinoOTA.handle();
         }
