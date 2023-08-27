@@ -99,10 +99,10 @@ void setup()
             ESP32PWM::allocateTimer(i);
             servo[i].setPeriodHertz(servoFreq_hz);
         }
-        servo[1].attach(pins.esc1);
-        servo[2].attach(pins.esc2);
-        servo[3].attach(pins.esc3);
-        servo[4].attach(pins.esc4);
+        servo[0].attach(pins.esc1);
+        servo[1].attach(pins.esc2);
+        servo[2].attach(pins.esc3);
+        servo[3].attach(pins.esc4);
     } else {
         for (int i = 0; i < numMotors; i++) {
             dshot[i].begin(dshotMode, false); // bitrate & bidirectional
