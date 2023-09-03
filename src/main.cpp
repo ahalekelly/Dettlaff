@@ -8,8 +8,10 @@
 #include "hBridgeDriver.h"
 #include "types.h"
 #include <Arduino.h>
-#include <ArduinoOTA.h>
-#include <esp_wifi.h>
+// #include <ArduinoOTA.h>
+#include <QuickPID.h>
+// #include <esp_wifi.h>
+#include <sTune.h>
 
 uint32_t loopStartTimer_us = micros();
 uint16_t loopTime_us = targetLoopTime_us;
@@ -18,22 +20,28 @@ uint32_t lastRevTime_ms = 0; // for calculating idling
 uint32_t pusherTimer_ms = 0;
 uint32_t zeroRPM[4] = { 0, 0, 0, 0 };
 uint32_t (*targetRPM)[4]; // a pointer to a uint32_t[4] array. always points to either revRPM, idleRPM, or zeroRPM
+float targetRPM_f[4] = { 0, 0, 0, 0 };
 uint32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
+float throttleValue_f[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
 uint32_t dshotValue = 0;
 int16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
 bool reverseBraking = false;
-bool closedLoopFlywheels = false;
+bool closedLoopFlywheels = true;
 uint32_t scaledMotorKv = motorKv * 11; // motor kv * battery voltage resistor divider ratio
 const uint32_t maxThrottle = 1999;
-uint32_t motorRPM[4] = { 0, 0, 0, 0 };
+float motorRPM[4] = { 0, 0, 0, 0 };
 Driver* pusher;
 bool wifiState = false;
 String telemBuffer = "";
 int8_t telemMotorNum = -1; // 0-3
 uint16_t tempRPM = 0;
 uint32_t triggerTime_us = 0;
+uint8_t motorNum = 0;
+uint16_t outputSpan = maxThrottle + 1;
+uint16_t outputStep = maxThrottle + 1;
+uint32_t revAtTime_us = 0;
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
@@ -43,15 +51,30 @@ Bounce2::Button button = Bounce2::Button();
 // Declare servo variables for each motor.
 Servo servo[4];
 DShotRMT dshot[4] = {
-    DShotRMT(pins.esc1), DShotRMT(pins.esc2),
-    DShotRMT(pins.esc3), DShotRMT(pins.esc4)
+    DShotRMT(pins.esc1),
+    DShotRMT(pins.esc2),
+    DShotRMT(pins.esc3),
+    DShotRMT(pins.esc4)
+};
+
+float Kp = 0.262;
+float Ki = 28.434;
+float Kd = 230.049;
+
+sTune tuner = sTune(&motorRPM[motorNum], &throttleValue_f[motorNum], tuner.ZN_PI, tuner.direct5T, tuner.printOFF);
+
+QuickPID PIDs[4] = {
+    QuickPID(&motorRPM[0], &throttleValue_f[0], &targetRPM_f[0]),
+    QuickPID(&motorRPM[1], &throttleValue_f[1], &targetRPM_f[1]),
+    QuickPID(&motorRPM[2], &throttleValue_f[2], &targetRPM_f[2]),
+    QuickPID(&motorRPM[3], &throttleValue_f[3], &targetRPM_f[3])
 };
 
 void WiFiInit();
 
 void setup()
 {
-    Serial.begin(115200);
+    Serial.begin(460800);
     Serial.println("Booting");
     if (pins.flywheel) {
         pinMode(pins.flywheel, OUTPUT);
@@ -77,8 +100,8 @@ void setup()
         break;
     }
 
-    Serial2.begin(115200, SERIAL_8N1, pins.telem, -1);
-    pinMode(pins.telem, INPUT_PULLUP);
+    // Serial2.begin(115200, SERIAL_8N1, pins.telem, -1);
+    // pinMode(pins.telem, INPUT_PULLUP);
 
     if (pins.revSwitch) {
         revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
@@ -95,7 +118,7 @@ void setup()
         cycleSwitch.interval(debounceTime_ms);
         cycleSwitch.setPressedState(cycleSwitchNormallyClosed);
     }
-
+    Serial.println("configuring dshot");
     if (dshotMode == DSHOT_OFF) {
         for (int i = 0; i < 4; i++) {
             ESP32PWM::allocateTimer(i);
@@ -121,8 +144,16 @@ void setup()
         delayMicroseconds(30);
         digitalWrite(pins.nSleep, HIGH);
     }
+    Serial.println("configuring sTune");
+    if (closedLoopFlywheels) {
+        for (int i = 0; i < numMotors; i++) {
+            tuner.Configure(99999, outputSpan, 0, outputStep, 1, 5, 500);
+        }
+    }
+    Serial.println("starting wifi");
 
-    WiFiInit();
+    // WiFiInit();
+    Serial.println("end of setup");
 }
 
 void loop()
@@ -137,9 +168,9 @@ void loop()
     }
 
     // Transfer data from telemetry serial port to telemetry serial buffer:
-    while (Serial2.available()) {
-        telemBuffer += Serial2.read(); // this doesn't seem to work - do we need 1k pullup resistor? also is this the most efficient way to do this?
-    }
+    // while (Serial2.available()) {
+    //     telemBuffer += Serial2.read(); // this doesn't seem to work - do we need 1k pullup resistor? also is this the most efficient way to do this?
+    // }
     // Then parse serial buffer, if serial buffer contains complete packet then update motorRPM value, clear serial buffer, and increment telemMotorNum to get the data for the next motor
     // will we be able to detect the gaps between packets to know when a packet is complete? Need to test and see
     //    Serial.println(telemBuffer);
@@ -176,14 +207,14 @@ void loop()
         break;
 
     case STATE_ACCELERATING:
-        if (closedLoopFlywheels) {
-            // If ALL motors are at target RPM update the blaster's state to FULLSPEED.
-            // in the future add predictive capacity for when they'll be up to speed in the future, taking into account pusher delay
-            if (motorRPM[0] > firingRPM[0] && (numMotors <= 1 || motorRPM[1] > firingRPM[1]) && (numMotors <= 2 || motorRPM[2] > firingRPM[2]) && (numMotors <= 3 || motorRPM[3] > firingRPM[3])) {
-                flywheelState = STATE_FULLSPEED;
-            }
-
-        } else if (!closedLoopFlywheels && time_ms > lastRevTime_ms + firingDelay_ms) {
+        // if (closedLoopFlywheels) {
+        // If ALL motors are at target RPM update the blaster's state to FULLSPEED.
+        // in the future add predictive capacity for when they'll be up to speed in the future, taking into account pusher delay
+        // if (motorRPM[0] > firingRPM[0] && (numMotors <= 1 || motorRPM[1] > firingRPM[1]) && (numMotors <= 2 || motorRPM[2] > firingRPM[2]) && (numMotors <= 3 || motorRPM[3] > firingRPM[3])) {
+        //     flywheelState = STATE_FULLSPEED;
+        // }
+        //    }
+        if (time_ms > lastRevTime_ms + firingDelay_ms) {
             flywheelState = STATE_FULLSPEED;
         }
         break;
@@ -269,32 +300,84 @@ void loop()
 
     // calculate throttleValue
     if (closedLoopFlywheels) {
-        // temporary copy of open loop calculation
-        for (int i = 0; i < numMotors; i++) {
-            if (throttleValue[i] == 0) {
-                throttleValue[i] = min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryADC_mv * 1000 / scaledMotorKv);
-            } else {
-                throttleValue[i] = max(min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryADC_mv * 1000 / scaledMotorKv),
-                    throttleValue[i] - spindownSpeed);
-            }
-        }
-
         // get rpm via bidirectional dshot
-        Serial.print(loopStartTimer_us - triggerTime_us);
-        Serial.print(" ");
-        Serial.print(throttleValue[0]);
-        Serial.print(" ");
         for (int8_t i = 0; i < numMotors; i++) {
+            targetRPM_f[i] = static_cast<float>((*targetRPM)[i]);
             tempRPM = dshot[i].get_dshot_RPM();
             if (tempRPM > 0) {
-                motorRPM[i] = tempRPM;
+                motorRPM[i] = static_cast<float>(tempRPM);
             }
-            Serial.print(tempRPM);
-            Serial.print(" ");
         }
-        Serial.println();
 
-        // PID control code goes here
+        switch (tuner.Run()) {
+        case tuner.sample: // active once per sample during test
+            // Serial.print("S ");
+            break;
+
+        case tuner.tunings: // active just once when sTune is done
+            // tuner.SetTuningMethod(tuner.TuningMethod::ZN_PID);
+            // tuner.printTunings();
+            // tuner.SetTuningMethod(tuner.TuningMethod::DampedOsc_PID);
+            // tuner.printTunings();
+            // tuner.SetTuningMethod(tuner.TuningMethod::NoOvershoot_PID);
+            // tuner.printTunings();
+            // tuner.SetTuningMethod(tuner.TuningMethod::CohenCoon_PID);
+            // tuner.printTunings();
+            // tuner.SetTuningMethod(tuner.TuningMethod::Mixed_PID);
+            // tuner.printTunings();
+            // tuner.SetTuningMethod(tuner.TuningMethod::ZN_PI);
+            // tuner.printTunings();
+            // tuner.SetTuningMethod(tuner.TuningMethod::DampedOsc_PI);
+            // tuner.printTunings();
+            // tuner.SetTuningMethod(tuner.TuningMethod::NoOvershoot_PI);
+            // tuner.printTunings();
+            // tuner.SetTuningMethod(tuner.TuningMethod::CohenCoon_PI);
+            // tuner.printTunings();
+            // tuner.SetTuningMethod(tuner.TuningMethod::Mixed_PI);
+            // tuner.printTunings();
+
+            //            tuner.SetTuningMethod(tuner.TuningMethod::ZN_PI);
+            tuner.GetAutoTunings(&Kp, &Ki, &Kd); // sketch variables updated by sTune
+            PIDs[motorNum].SetOutputLimits(0, outputSpan);
+            PIDs[motorNum].SetSampleTimeUs(1000);
+            PIDs[motorNum].SetMode(PIDs[motorNum].Control::automatic); // the PID is turned on
+            PIDs[motorNum].SetProportionalMode(PIDs[motorNum].pMode::pOnMeas);
+            PIDs[motorNum].SetAntiWindupMode(PIDs[motorNum].iAwMode::iAwClamp);
+            PIDs[motorNum].SetTunings(Kp, Ki, Kd); // update PID with the new tunings
+
+            throttleValue_f[motorNum] = 0;
+            revAtTime_us = loopStartTimer_us + 1000 * 1000; // rev after 1 second
+            break;
+
+        case tuner.runPid: // active once per sample after tunings
+            PIDs[motorNum].Compute();
+            // Serial.print("C ");
+            break;
+        }
+
+        if (revAtTime_us != 0 && loopStartTimer_us > revAtTime_us) {
+            triggerTime_us = loopStartTimer_us;
+            targetRPM = &revRPM;
+            lastRevTime_ms = time_ms;
+            flywheelState = STATE_ACCELERATING;
+            revAtTime_us = 0;
+        }
+
+        if (throttleValue_f[motorNum] > throttleValue[motorNum]) { // spin up
+            throttleValue[motorNum] = static_cast<int>(throttleValue_f[motorNum]);
+        } else if (throttleValue[motorNum] > 0) { // spin down
+            throttleValue[motorNum] = throttleValue[motorNum] - spindownSpeed;
+        }
+        Serial.print(loopStartTimer_us);
+        Serial.print(" ");
+        Serial.print(targetRPM_f[motorNum]);
+        Serial.print(" ");
+        Serial.print(motorRPM[motorNum]);
+        Serial.print(" ");
+        Serial.print(throttleValue_f[motorNum]);
+        Serial.print(" ");
+        Serial.print(throttleValue[motorNum]);
+        Serial.println();
     } else { // open loop case
         for (int i = 0; i < numMotors; i++) {
             if (throttleValue[i] == 0) {
@@ -325,6 +408,7 @@ void loop()
             }
         }
     }
+    /*
     if (wifiState == true) {
         if (time_ms > wifiDuration_ms || flywheelState != STATE_IDLE) {
             wifiState = false;
@@ -335,16 +419,16 @@ void loop()
             ArduinoOTA.handle();
         }
     }
+    */
     loopTime_us = micros() - loopStartTimer_us; // 'us' is microseconds
     if (loopTime_us > targetLoopTime_us) {
-        ;
         // Serial.print("loop over time, ");
         // Serial.println(loopTime_us);
     } else {
         delayMicroseconds(max((long)(0), (long)(targetLoopTime_us - loopTime_us)));
     }
 }
-
+/*
 void WiFiInit()
 {
     wifiState = true;
@@ -359,12 +443,10 @@ void WiFiInit()
         Serial.print("WiFi Connected ");
         Serial.println(wifiSsid);
         ArduinoOTA.setHostname("Dettlaff");
-        /*
-            if(!MDNS.begin("dettlaff")) {
-              Serial.println("Error starting mDNS");
-              return;
-            }
-        */
+            // if(!MDNS.begin("dettlaff")) {
+            //   Serial.println("Error starting mDNS");
+            //   return;
+            // }
         Serial.println(WiFi.localIP());
 
         // No authentication by default
@@ -406,3 +488,4 @@ void WiFiInit()
 
     Serial.println("WiFi Ready");
 }
+*/

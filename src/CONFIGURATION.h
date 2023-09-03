@@ -29,14 +29,14 @@ pins_t pins = pins_v0_7; // select the one that matches your board revision
 // pins_v0_1
 
 // Pusher Settings
-pusherType_t pusherType = PUSHER_SOLENOID_OPENLOOP; // either PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
-uint16_t burstLength = 3;
-uint8_t bufferMode = 1;
+pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP; // either PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
+uint16_t burstLength = 5;
+uint8_t bufferMode = 0;
 // 0 = stop firing when trigger is released
 // 1 = complete current burst when trigger is released
 // 2 = fire as many bursts as trigger pulls
 // for full auto, set burstLength high (50+) and bufferMode = 0
-uint16_t firingDelay_ms = 100; // delay to allow flywheels to spin up before firing dart
+uint16_t firingDelay_ms = 500; // delay to allow flywheels to spin up before firing dart
 uint16_t solenoidExtendTime_ms = 20;
 uint16_t solenoidRetractTime_ms = 35;
 bool pusherReverseDirection = false; // make motor spin backwards? v0.5 & v0.6 (hBridgeDriver) need this to be false or the pusher logic is inverted? and the v0.2 - v0.4 at8870 pusher seems to need this to be true for reverse polarity braking to work?
