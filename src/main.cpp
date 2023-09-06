@@ -137,27 +137,25 @@ void setup()
         digitalWrite(pins.nSleep, HIGH);
     }
 
-    //set firingMode
+    // set firingMode
     if (pins.select1) {
         select1.update();
     }
     if (pins.select2) {
         select2.update();
     }
-    if(select1.isPressed()){
+    if (select1.isPressed()) {
         firingMode = 1;
-    }
-    else if(select2.isPressed()){
+    } else if (select2.isPressed()) {
         firingMode = 2;
-    }
-    else {
+    } else {
         firingMode = 0;
     }
-    //changeFPS on boot by firing mode
-    for (int i = 0; i<numMotors; i++){
+    // changeFPS on boot by firing mode
+    for (int i = 0; i < numMotors; i++) {
         revRPM[i] = revRPMset[firingMode][i];
         idleRPM[i] = idleRPMset[firingMode][i];
-        firingRPM[i] = revRPM[i]*0.9;
+        firingRPM[i] = revRPM[i] * 0.9;
     }
     idleTime_ms = idleTimeSet_ms[firingMode];
     firingDelay_ms = firingDelaySet_ms[firingMode];
@@ -183,20 +181,18 @@ void loop()
     if (pins.select2) {
         select2.update();
     }
-    //set firingMode from selector switch
-    if(select1.isPressed()){
+    // set firingMode from selector switch
+    if (select1.isPressed()) {
         firingMode = 1;
-    }
-    else if(select2.isPressed()){
+    } else if (select2.isPressed()) {
         firingMode = 2;
-    }
-    else {
+    } else {
         firingMode = 0;
     }
-    //changes burst options
+    // changes burst options
     burstLength = burstLengthSet[firingMode];
     bufferMode = BufferModeSet[firingMode];
-    
+
     // Transfer data from telemetry serial port to telemetry serial buffer:
     // while (Serial2.available()) {
     //     telemBuffer += Serial2.read(); // this doesn't seem to work - do we need 1k pullup resistor? also is this the most efficient way to do this?
