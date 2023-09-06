@@ -2,8 +2,8 @@
 #include "boards_config.h" // board pinouts are in this file. you can check and modify which switch is on which pin there.
 
 //Selector settings ON BOOT, locked after booting
-uint32_t revRPMset[3][2] = { { 50000, 50000 }, { 25000, 25000 },  { 14000, 14000 } }; // adjust this to change fps, pairs are firingMode 1, 2, 3 and elements in pair are first and second stage RPM
-uint32_t idleRPMset[3][2] = { { 25000, 25000 }, { 0, 0 }, { 0, 0 } }; // adjust this to change idleRPM, pairs are firingMode 1, 2, 3 and elements in pair are first and second stage RPM
+uint32_t revRPMset[3][2] = { { 50000, 50000, 50000, 50000 }, { 25000, 25000, 25000, 25000 },  { 14000, 14000, 14000, 14000 } }; // adjust this to change fps, pairs are firingMode 1, 2, 3 and elements in pair are first and second stage RPM
+uint32_t idleRPMset[3][2] = { { 25000, 25000, 25000, 25000 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 } }; // adjust this to change idleRPM, pairs are firingMode 1, 2, 3 and elements in pair are first and second stage RPM
 uint32_t idleTimeSet_ms[3] = { 0, 0, 15000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds, for firingMode 1, 2, 3
 uint32_t firingDelaySet_ms[3] = {150, 75, 50}; // delay to allow flywheels to spin up before firing dart for firingMode 1, 2, 3
 
