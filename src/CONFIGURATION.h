@@ -18,7 +18,7 @@ uint32_t BufferModeSet[3] = { 0, 1, 1 };
 // Flywheel Settings
 uint32_t motorKv = 3200;
 uint32_t batteryADC_mv = 14800 / 11; // battery voltage in mv divided by voltage divider ratio (11)
-dshot_mode_t dshotMode = DSHOT150; // DSHOT150 for dshot, or DSHOT_OFF to fall back to servo PWM
+dshot_mode_t dshotMode = DSHOT300; // Options are DSHOT150, DSHOT300, DSHOT600, or DSHOT_OFF. DSHOT300 is recommended, DSHOT150 does not work with either AM32 ESCs or closed loop control, and DSHOT600 seems less reliable. DSHOT_OFF falls back to servo PWM
 
 // Dettlaff Settings
 char wifiSsid[32] = "network name";
