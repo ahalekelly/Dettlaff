@@ -51,8 +51,10 @@ Bounce2::Button select2 = Bounce2::Button();
 // Declare servo variables for each motor.
 Servo servo[4];
 DShotRMT dshot[4] = {
-    DShotRMT(pins.esc1, RMT_CHANNEL_1), DShotRMT(pins.esc2, RMT_CHANNEL_2),
-    DShotRMT(pins.esc3, RMT_CHANNEL_3), DShotRMT(pins.esc4, RMT_CHANNEL_4)
+    DShotRMT(pins.esc1),
+    DShotRMT(pins.esc2),
+    DShotRMT(pins.esc3),
+    DShotRMT(pins.esc4)
 };
 
 void WiFiInit();
