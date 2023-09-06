@@ -2,13 +2,14 @@
 #include "CONFIGURATION.h"
 #include "DShotRMT.h"
 #include "ESP32Servo.h"
-#include "at8870Driver.h"
 #include "driver.h"
+#include "drvDriver.h"
 #include "fetDriver.h"
 #include "hBridgeDriver.h"
 #include "types.h"
 #include <Arduino.h>
 #include <ArduinoOTA.h>
+#include <esp_wifi.h>
 
 uint32_t loopStartTimer_us = micros();
 uint16_t loopTime_us = targetLoopTime_us;
@@ -26,6 +27,7 @@ uint32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
 uint16_t burstLength; // stores value from burstLengthSet for current firing mode
 uint8_t bufferMode; // stores value from bufferModeSet for current firing mode
 int8_t firingMode; // stores value from firingModeSet for current firing mode
+uint32_t dshotValue = 0;
 int16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
@@ -35,6 +37,9 @@ uint32_t scaledMotorKv = motorKv * 11; // motor kv * battery voltage resistor di
 const uint32_t maxThrottle = 1999;
 uint32_t motorRPM[4] = { 0, 0, 0, 0 };
 Driver* pusher;
+bool wifiState = false;
+String telemBuffer = "";
+int8_t telemMotorNum = -1; // 0-3
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
@@ -60,14 +65,18 @@ void setup()
         pinMode(pins.flywheel, OUTPUT);
         digitalWrite(pins.flywheel, HIGH);
     }
-    WiFiInit();
+    if (pins.nSleep) {
+        pinMode(pins.nSleep, OUTPUT);
+        digitalWrite(pins.nSleep, HIGH);
+    }
 
     switch (pins.pusherDriverType) {
     case HBRIDGE_DRIVER:
         pusher = new Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, maxDutyCycle_pct, pwmFreq_hz, deadtime);
+        pusher->coast();
         break;
-    case AT8870_DRIVER:
-        pusher = new At8870(pins.pusher1L, pins.pusher2L, pwmFreq_hz);
+    case DRV_DRIVER:
+        pusher = new Drv(pins.pusher1L, pins.pusher2L, pwmFreq_hz, pins.pusherCoastHigh);
         break;
     case FET_DRIVER:
         pusher = new Fet(pins.pusher1H);
@@ -75,6 +84,9 @@ void setup()
     default:
         break;
     }
+
+    Serial2.begin(115200, SERIAL_8N1, pins.telem, -1);
+    pinMode(pins.telem, INPUT_PULLUP);
 
     if (pins.revSwitch) {
         revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
@@ -105,23 +117,33 @@ void setup()
     if (dshotMode == DSHOT_OFF) {
         for (int i = 0; i < 4; i++) {
             ESP32PWM::allocateTimer(i);
-            servo[i].setPeriodHertz(200);
+            servo[i].setPeriodHertz(servoFreq_hz);
         }
-        servo[1].attach(pins.esc1);
-        servo[2].attach(pins.esc2);
-        servo[3].attach(pins.esc3);
-        servo[4].attach(pins.esc4);
+        servo[0].attach(pins.esc1);
+        servo[1].attach(pins.esc2);
+        servo[2].attach(pins.esc3);
+        servo[3].attach(pins.esc4);
     } else {
         for (int i = 0; i < numMotors; i++) {
             dshot[i].begin(dshotMode, false); // bitrate & bidirectional
         }
-        delay(100);
+        delay(10);
         for (int i = 0; i < numMotors; i++) {
-            dshot[i].send_dshot_value(48, NO_TELEMETRIC); // make sure blheli ESCs boot properly
-            dshot[i].send_dshot_value(0, NO_TELEMETRIC);
+            if (am32ESC) {
+                dshot[i].send_dshot_value(0, NO_TELEMETRIC);
+            } else {
+                dshot[i].send_dshot_value(48, NO_TELEMETRIC);
+            }
         }
-        delay(100);
+        delay(10);
     }
+
+    if (pins.nSleep) {
+        digitalWrite(pins.nSleep, LOW);
+        delayMicroseconds(30);
+        digitalWrite(pins.nSleep, HIGH);
+    }
+
     //set firingMode
     if (pins.select1) {
         select1.update();
@@ -146,6 +168,8 @@ void setup()
     }
     idleTime_ms = idleTimeSet_ms[firingMode];
     firingDelay_ms = firingDelaySet_ms[firingMode];
+
+    WiFiInit();
 }
 
 void loop()
@@ -178,8 +202,13 @@ void loop()
     burstLength = burstLengthSet[firingMode];
     bufferMode = BufferModeSet[firingMode];
     
-    // *Need to implement*
-    // Get flywheel RPM data, store it in motorRPM
+    // Transfer data from telemetry serial port to telemetry serial buffer:
+    while (Serial2.available()) {
+        telemBuffer += Serial2.read(); // this doesn't seem to work - do we need 1k pullup resistor? also is this the most efficient way to do this?
+    }
+    // Then parse serial buffer, if serial buffer contains complete packet then update motorRPM value, clear serial buffer, and increment telemMotorNum to get the data for the next motor
+    // will we be able to detect the gaps between packets to know when a packet is complete? Need to test and see
+    //    Serial.println(telemBuffer);
 
     if (triggerSwitch.pressed()) { // pressed and released are transitions, isPressed is for state
         if (bufferMode == 0) {
@@ -240,9 +269,7 @@ void loop()
                     shotsToFire = shotsToFire - 1;
                     pusherTimer_ms = time_ms;
                     if (shotsToFire <= 0) { // brake pusher
-                        Serial.println("braking started, now idling");
                         if (pusherReversePolarityDuration_ms > 0) {
-                            Serial.println("reverse braking started");
                             pusher->drive(100, !pusherReverseDirection); // drive motor backwards to stop faster
                             reverseBraking = true;
                             //                  firing = false; this doesn't work because this pusher control routine only runs when the flywheels are running, so this causes reverse braking to never end. refactor later?
@@ -331,15 +358,27 @@ void loop()
         }
         //    Serial.println("");
     } else {
-        for (int i = 0; i < numMotors; i++) {
-            if (throttleValue[i] == 0) {
-                dshot[i].send_dshot_value(0, NO_TELEMETRIC);
+        for (int8_t i = 0; i < numMotors; i++) {
+            if (throttleValue[i] == 0 && am32ESC) {
+                dshotValue = 0;
             } else {
-                dshot[i].send_dshot_value(throttleValue[i] + 48, NO_TELEMETRIC);
+                dshotValue = throttleValue[i] + 48;
+            }
+            if (i == telemMotorNum) {
+                dshot[i].send_dshot_value(dshotValue, ENABLE_TELEMETRIC); // is there a way to have dshot library only send one telemetric packet? doesn't seem like it
+            } else {
+                dshot[i].send_dshot_value(dshotValue, NO_TELEMETRIC);
             }
         }
     }
-    ArduinoOTA.handle();
+    if (wifiState == true) {
+        if (time_ms > wifiDuration_ms) {
+            wifiState = false;
+            Serial.println("Wifi turning off");
+        } else {
+            ArduinoOTA.handle();
+        }
+    }
     loopTime_us = micros() - loopStartTimer_us; // 'us' is microseconds
     if (loopTime_us > targetLoopTime_us) {
         Serial.print("loop over time, ");
@@ -351,6 +390,7 @@ void loop()
 
 void WiFiInit()
 {
+    wifiState = true;
     WiFi.mode(WIFI_STA);
     WiFi.begin(wifiSsid, wifiPass);
     if (WiFi.waitForConnectResult() != WL_CONNECTED) {
@@ -407,7 +447,5 @@ void WiFiInit()
 
     ArduinoOTA.begin();
 
-    Serial.println("Ready");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
+    Serial.println("WiFi Ready");
 }

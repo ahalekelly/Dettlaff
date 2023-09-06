@@ -23,9 +23,12 @@ dshot_mode_t dshotMode = DSHOT300; // Options are DSHOT150, DSHOT300, DSHOT600, 
 // Dettlaff Settings
 char wifiSsid[32] = "network name";
 char wifiPass[63] = "password";
+uint32_t wifiDuration_ms = 10 * 60 * 1000; // how long before wifi turns off to save power. default is 10 min
 
-pins_t pins = pins_v0_5; // select the one that matches your board revision
+pins_t pins = pins_v0_7; // select the one that matches your board revision
 // Options:
+// pins_v0_7
+// pins_v0_6
 // pins_v0_5
 // pins_v0_4_n20
 // pins_v0_4_noid
@@ -40,7 +43,7 @@ pins_t pins = pins_v0_5; // select the one that matches your board revision
 pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP; // either PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
 uint16_t solenoidExtendTime_ms = 20;
 uint16_t solenoidRetractTime_ms = 35;
-bool pusherReverseDirection = true;
+bool pusherReverseDirection = false; // make motor spin backwards? v0.5 & v0.6 (hBridgeDriver) need this to be false or the pusher logic is inverted? and the v0.2 - v0.4 at8870 pusher seems to need this to be true for reverse polarity braking to work?
 uint8_t pusherReversePolarityDuration_ms = 0; // try increasing this if your pusher doesn't stop at the right position because your pusher motor takes too long to stop. 10ms was good for my FDL with cheap pusher motor
 bool pusherReverseOnOverrun = false; // these two settings don't seem to work properly
 bool pusherEndReverseBrakingEarly = false;
@@ -59,3 +62,4 @@ uint16_t targetLoopTime_us = 1000; // microseconds
 float maxDutyCycle_pct = 98;
 uint8_t deadtime = 10;
 uint16_t pwmFreq_hz = 20000;
+uint16_t servoFreq_hz = 200;
