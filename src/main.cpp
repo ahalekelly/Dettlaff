@@ -127,7 +127,7 @@ void setup()
         servo[3].attach(pins.esc4);
     } else {
         for (int i = 0; i < numMotors; i++) {
-            dshot[i].begin(dshotMode, false); // bitrate & bidirectional
+            dshot[i].begin(dshotMode, ENABLE_BIDIRECTION, 14); // bitrate, bidirectional, and motor pole count
         }
     }
 
