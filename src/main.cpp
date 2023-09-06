@@ -38,7 +38,7 @@ const uint32_t maxThrottle = 1999;
 uint32_t motorRPM[4] = { 0, 0, 0, 0 };
 Driver* pusher;
 bool wifiState = false;
-String telemBuffer = "";
+// String telemBuffer = "";
 int8_t telemMotorNum = -1; // 0-3
 
 Bounce2::Button revSwitch = Bounce2::Button();
@@ -85,8 +85,8 @@ void setup()
         break;
     }
 
-    Serial2.begin(115200, SERIAL_8N1, pins.telem, -1);
-    pinMode(pins.telem, INPUT_PULLUP);
+    // Serial2.begin(115200, SERIAL_8N1, pins.telem, -1);
+    // pinMode(pins.telem, INPUT_PULLUP);
 
     if (pins.revSwitch) {
         revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
@@ -127,15 +127,6 @@ void setup()
         for (int i = 0; i < numMotors; i++) {
             dshot[i].begin(dshotMode, false); // bitrate & bidirectional
         }
-        delay(10);
-        for (int i = 0; i < numMotors; i++) {
-            if (am32ESC) {
-                dshot[i].send_dshot_value(0, NO_TELEMETRIC);
-            } else {
-                dshot[i].send_dshot_value(48, NO_TELEMETRIC);
-            }
-        }
-        delay(10);
     }
 
     if (pins.nSleep) {
@@ -168,6 +159,8 @@ void setup()
     }
     idleTime_ms = idleTimeSet_ms[firingMode];
     firingDelay_ms = firingDelaySet_ms[firingMode];
+
+    delay(100);
 
     WiFiInit();
 }
@@ -203,9 +196,9 @@ void loop()
     bufferMode = BufferModeSet[firingMode];
     
     // Transfer data from telemetry serial port to telemetry serial buffer:
-    while (Serial2.available()) {
-        telemBuffer += Serial2.read(); // this doesn't seem to work - do we need 1k pullup resistor? also is this the most efficient way to do this?
-    }
+    // while (Serial2.available()) {
+    //     telemBuffer += Serial2.read(); // this doesn't seem to work - do we need 1k pullup resistor? also is this the most efficient way to do this?
+    // }
     // Then parse serial buffer, if serial buffer contains complete packet then update motorRPM value, clear serial buffer, and increment telemMotorNum to get the data for the next motor
     // will we be able to detect the gaps between packets to know when a packet is complete? Need to test and see
     //    Serial.println(telemBuffer);
@@ -359,13 +352,13 @@ void loop()
         //    Serial.println("");
     } else {
         for (int8_t i = 0; i < numMotors; i++) {
-            if (throttleValue[i] == 0 && am32ESC) {
+            if (throttleValue[i] == 0) {
                 dshotValue = 0;
             } else {
                 dshotValue = throttleValue[i] + 48;
             }
             if (i == telemMotorNum) {
-                dshot[i].send_dshot_value(dshotValue, ENABLE_TELEMETRIC); // is there a way to have dshot library only send one telemetric packet? doesn't seem like it
+                dshot[i].send_dshot_value(dshotValue, ENABLE_TELEMETRIC);
             } else {
                 dshot[i].send_dshot_value(dshotValue, NO_TELEMETRIC);
             }
