@@ -41,12 +41,12 @@ pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP; // either PUSHER_MOTOR_CLOSED
 uint16_t solenoidExtendTime_ms = 20;
 uint16_t solenoidRetractTime_ms = 35;
 bool pusherReverseDirection = true;
-uint8_t pusherReversePolarityDuration_ms = 0;
-bool pusherReverseOnOverrun = false;
+uint8_t pusherReversePolarityDuration_ms = 0; // try increasing this if your pusher doesn't stop at the right position because your pusher motor takes too long to stop. 10ms was good for my FDL with cheap pusher motor
+bool pusherReverseOnOverrun = false; // these two settings don't seem to work properly
 bool pusherEndReverseBrakingEarly = false;
 
 // Advanced Settings
-uint16_t pusherStallTime_ms = 1000; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?
+uint16_t pusherStallTime_ms = 500; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?
 uint8_t numMotors = 4; // leave at 4 until we have closed loop control
 uint16_t spindownSpeed = 1; // higher number makes the flywheels spin down faster after you release the trigger
 bool revSwitchNormallyClosed = false; // invert switch signal?
