@@ -1,14 +1,9 @@
 #include "types.h"
 
-const pins_t pins_v0_7 = {
+const boards_t board_v0_7 = {
     .pusherDriverType = DRV_DRIVER,
     .pusherCoastHigh = true,
     .nSleep = 27,
-    .revSwitch = 15,
-    .triggerSwitch = 32,
-    .cycleSwitch = 23,
-    .select1 = 25,
-    .select2 = 33,
     .flywheel = 2,
     .pusher1L = 12,
     .pusher2L = 13,
@@ -21,13 +16,8 @@ const pins_t pins_v0_7 = {
     .batteryADC = 35,
 };
 
-const pins_t pins_v0_5 = {
+const boards_t board_v0_5 = {
     .pusherDriverType = HBRIDGE_DRIVER,
-    .revSwitch = 15,
-    .triggerSwitch = 32,
-    .cycleSwitch = 23,
-    .select1 = 25,
-    .select2 = 33,
     .flywheel = 2,
     .pusher1L = 14,
     .pusher2L = 27,
@@ -42,14 +32,11 @@ const pins_t pins_v0_5 = {
     .batteryADC = 35,
 };
 
-const pins_t pins_v0_6 = pins_v0_5;
+const boards_t board_v0_6 = board_v0_5;
 
-const pins_t pins_v0_4_n20 = {
+const boards_t board_v0_4_n20 = {
     .pusherDriverType = DRV_DRIVER,
     .pusherCoastHigh = false,
-    .revSwitch = 15,
-    .triggerSwitch = 32,
-    .cycleSwitch = 23,
     .flywheel = 2,
     .pusher1L = 12,
     .pusher2L = 13,
@@ -62,10 +49,8 @@ const pins_t pins_v0_4_n20 = {
     .batteryADC = 35,
 };
 
-const pins_t pins_v0_4_noid = {
+const boards_t board_v0_4_noid = {
     .pusherDriverType = FET_DRIVER,
-    .revSwitch = 15,
-    .triggerSwitch = 32,
     .pusher1H = 2,
     .esc1 = 19,
     .esc2 = 18,
@@ -76,12 +61,9 @@ const pins_t pins_v0_4_noid = {
     .batteryADC = 35,
 };
 
-const pins_t pins_v0_3_n20 = {
+const boards_t board_v0_3_n20 = {
     .pusherDriverType = DRV_DRIVER,
     .pusherCoastHigh = false,
-    .revSwitch = 15,
-    .triggerSwitch = 32,
-    .cycleSwitch = 23,
     .flywheel = 2,
     .pusher1L = 12,
     .pusher2L = 13,
@@ -94,10 +76,8 @@ const pins_t pins_v0_3_n20 = {
     .batteryADC = 33,
 };
 
-const pins_t pins_v0_3_noid = {
+const boards_t board_v0_3_noid = {
     .pusherDriverType = FET_DRIVER,
-    .revSwitch = 15,
-    .triggerSwitch = 32,
     .pusher1H = 2,
     .esc1 = 19,
     .esc2 = 18,
@@ -108,8 +88,7 @@ const pins_t pins_v0_3_noid = {
     .batteryADC = 33,
 };
 
-const pins_t pins_v0_2 = {
-    .revSwitch = 15,
+const boards_t board_v0_2 = {
     .esc1 = 19,
     .esc2 = 18,
     .esc3 = 5,
@@ -119,8 +98,7 @@ const pins_t pins_v0_2 = {
     .batteryADC = 12,
 };
 
-const pins_t pins_v0_1 = {
-    .revSwitch = 12,
+const boards_t board_v0_1 = {
     .esc1 = 4,
     .esc2 = 2,
     .esc3 = 15,

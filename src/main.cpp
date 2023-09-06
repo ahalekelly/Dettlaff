@@ -53,10 +53,10 @@ Bounce2::Button select2 = Bounce2::Button();
 // Declare servo variables for each motor.
 Servo servo[4];
 DShotRMT dshot[4] = {
-    DShotRMT(pins.esc1),
-    DShotRMT(pins.esc2),
-    DShotRMT(pins.esc3),
-    DShotRMT(pins.esc4)
+    DShotRMT(board.esc1),
+    DShotRMT(board.esc2),
+    DShotRMT(board.esc3),
+    DShotRMT(board.esc4)
 };
 
 void WiFiInit();
@@ -65,55 +65,55 @@ void setup()
 {
     Serial.begin(460800);
     Serial.println("Booting");
-    if (pins.flywheel) {
-        pinMode(pins.flywheel, OUTPUT);
-        digitalWrite(pins.flywheel, HIGH);
+    if (board.flywheel) {
+        pinMode(board.flywheel, OUTPUT);
+        digitalWrite(board.flywheel, HIGH);
     }
-    if (pins.nSleep) {
-        pinMode(pins.nSleep, OUTPUT);
-        digitalWrite(pins.nSleep, HIGH);
+    if (board.nSleep) {
+        pinMode(board.nSleep, OUTPUT);
+        digitalWrite(board.nSleep, HIGH);
     }
 
-    switch (pins.pusherDriverType) {
+    switch (board.pusherDriverType) {
     case HBRIDGE_DRIVER:
-        pusher = new Hbridge(pins.pusher1H, pins.pusher1L, pins.pusher2H, pins.pusher2L, maxDutyCycle_pct, pwmFreq_hz, deadtime);
+        pusher = new Hbridge(board.pusher1H, board.pusher1L, board.pusher2H, board.pusher2L, maxDutyCycle_pct, pwmFreq_hz, deadtime);
         pusher->coast();
         break;
     case DRV_DRIVER:
-        pusher = new Drv(pins.pusher1L, pins.pusher2L, pwmFreq_hz, pins.pusherCoastHigh);
+        pusher = new Drv(board.pusher1L, board.pusher2L, pwmFreq_hz, board.pusherCoastHigh);
         break;
     case FET_DRIVER:
-        pusher = new Fet(pins.pusher1H);
+        pusher = new Fet(board.pusher1H);
         break;
     default:
         break;
     }
 
-    // Serial2.begin(115200, SERIAL_8N1, pins.telem, -1);
-    // pinMode(pins.telem, INPUT_PULLUP);
+    // Serial2.begin(115200, SERIAL_8N1, board.telem, -1);
+    // pinMode(board.telem, INPUT_PULLUP);
 
-    if (pins.revSwitch) {
-        revSwitch.attach(pins.revSwitch, INPUT_PULLUP);
+    if (revSwitchPin) {
+        revSwitch.attach(revSwitchPin, INPUT_PULLUP);
         revSwitch.interval(debounceTime_ms);
         revSwitch.setPressedState(revSwitchNormallyClosed);
     }
-    if (pins.triggerSwitch) {
-        triggerSwitch.attach(pins.triggerSwitch, INPUT_PULLUP);
+    if (triggerSwitchPin) {
+        triggerSwitch.attach(triggerSwitchPin, INPUT_PULLUP);
         triggerSwitch.interval(debounceTime_ms);
         triggerSwitch.setPressedState(triggerSwitchNormallyClosed);
     }
-    if (pins.cycleSwitch) {
-        cycleSwitch.attach(pins.cycleSwitch, INPUT_PULLUP);
+    if (cycleSwitchPin) {
+        cycleSwitch.attach(cycleSwitchPin, INPUT_PULLUP);
         cycleSwitch.interval(debounceTime_ms);
         cycleSwitch.setPressedState(cycleSwitchNormallyClosed);
     }
-    if (pins.select1) {
-        select1.attach(pins.select1, INPUT_PULLUP);
+    if (select1Pin) {
+        select1.attach(select1Pin, INPUT_PULLUP);
         select1.interval(debounceTime_ms);
         select1.setPressedState(false);
     }
-    if (pins.select2) {
-        select2.attach(pins.select2, INPUT_PULLUP);
+    if (select2Pin) {
+        select2.attach(select2Pin, INPUT_PULLUP);
         select2.interval(debounceTime_ms);
         select2.setPressedState(false);
     }
@@ -123,27 +123,27 @@ void setup()
             ESP32PWM::allocateTimer(i);
             servo[i].setPeriodHertz(servoFreq_hz);
         }
-        servo[0].attach(pins.esc1);
-        servo[1].attach(pins.esc2);
-        servo[2].attach(pins.esc3);
-        servo[3].attach(pins.esc4);
+        servo[0].attach(board.esc1);
+        servo[1].attach(board.esc2);
+        servo[2].attach(board.esc3);
+        servo[3].attach(board.esc4);
     } else {
         for (int i = 0; i < numMotors; i++) {
             dshot[i].begin(dshotMode, dshotBidirectional, 14); // bitrate, bidirectional, and motor pole count
         }
     }
 
-    if (pins.nSleep) {
-        digitalWrite(pins.nSleep, LOW);
+    if (board.nSleep) {
+        digitalWrite(board.nSleep, LOW);
         delayMicroseconds(30);
-        digitalWrite(pins.nSleep, HIGH);
+        digitalWrite(board.nSleep, HIGH);
     }
 
     // set firingMode
-    if (pins.select1) {
+    if (select1Pin) {
         select1.update();
     }
-    if (pins.select2) {
+    if (select2Pin) {
         select2.update();
     }
     if (select1.isPressed()) {
@@ -173,16 +173,16 @@ void loop()
 {
     loopStartTimer_us = micros();
     time_ms = millis();
-    if (pins.revSwitch) {
+    if (revSwitchPin) {
         revSwitch.update();
     }
-    if (pins.triggerSwitch) {
+    if (triggerSwitchPin) {
         triggerSwitch.update();
     }
-    if (pins.select1) {
+    if (select1Pin) {
         select1.update();
     }
-    if (pins.select2) {
+    if (select2Pin) {
         select2.update();
     }
     // set firingMode from selector switch
@@ -375,7 +375,7 @@ void loop()
         if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && triggerTime_us != 0 && loopStartTimer_us - triggerTime_us < 250000) {
             Serial.print((loopStartTimer_us - triggerTime_us) / 1000);
             Serial.print(" ");
-            Serial.print(analogRead(pins.batteryADC));
+            Serial.print(analogRead(board.batteryADC));
             Serial.print(" ");
             Serial.print(throttleValue[0]);
             Serial.print(" ");

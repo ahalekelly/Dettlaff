@@ -25,11 +25,6 @@ typedef struct {
     pusherDriverType_t pusherDriverType;
     bool pusherCoastHigh;
     int8_t nSleep;
-    int8_t revSwitch;
-    int8_t triggerSwitch;
-    int8_t cycleSwitch;
-    int8_t select1;
-    int8_t select2;
     int8_t flywheel;
     int8_t pusher1L;
     int8_t pusher2L;
@@ -42,6 +37,6 @@ typedef struct {
     int8_t telem;
     int8_t button;
     int8_t batteryADC;
-} pins_t;
+} boards_t;
 
 #endif

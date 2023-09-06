@@ -1,5 +1,5 @@
 #include "DShotRMT.h" // We need this for the dshot modes
-#include "boards_config.h" // board pinouts are in this file. you can check and modify which switch is on which pin there.
+#include "boards_config.h" // board pinouts are in this file
 
 //Selector settings ON BOOT, locked after booting
 uint32_t revRPMset[3][4] = { { 50000, 50000, 50000, 50000 }, { 25000, 25000, 25000, 25000 },  { 14000, 14000, 14000, 14000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
@@ -27,19 +27,26 @@ char wifiPass[63] = "password";
 uint32_t wifiDuration_ms = 10 * 60 * 1000; // how long before wifi turns off to save power. default is 10 min
 uint32_t printTelemetry = false; // output telemetry over USB serial port for tuning
 
-pins_t pins = pins_v0_7; // select the one that matches your board revision
+// Input Pins, set to 0 if not using
+uint8_t triggerSwitchPin = 32; // main trigger pin
+uint8_t revSwitchPin = 15; // optional rev trigger
+uint8_t cycleSwitchPin = 23; // pusher motor home switch
+uint8_t select1Pin = 25; // optional for select fire
+uint8_t select2Pin = 33; // optional for select fire
+
+boards_t board = board_v0_7; // select the one that matches your board revision
 // Options:
-// pins_v0_7
-// pins_v0_6
-// pins_v0_5
-// pins_v0_4_n20
-// pins_v0_4_noid
-// pins_v0_3_n20
-// pins_v0_3_noid
+// board_v0_7
+// board_v0_6
+// board_v0_5
+// board_v0_4_n20
+// board_v0_4_noid
+// board_v0_3_n20
+// board_v0_3_noid
 // _noid means use the flywheel output to drive a solenoid pusher
 // _n20 for a pusher motor on the pusher output
-// pins_v0_2
-// pins_v0_1
+// board_v0_2
+// board_v0_1
 
 // Pusher Settings
 pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP; // either PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
