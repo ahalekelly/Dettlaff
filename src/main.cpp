@@ -130,18 +130,18 @@ void setup()
         select2.update();
     }
     if(select1.isPressed()){
-        firingMode = 0;
+        firingMode = 1;
     }
     else if(select2.isPressed()){
         firingMode = 2;
     }
     else {
-    firingMode = 1;
+        firingMode = 0;
     }
     //changeFPS on boot by firing mode
     for (int i = 0; i<numMotors; i++){
-        revRPM[i] = revRPMset[firingMode][i/2];
-        idleRPM[i] = idleRPMset[firingMode][i/2];
+        revRPM[i] = revRPMset[firingMode][i];
+        idleRPM[i] = idleRPMset[firingMode][i];
         firingRPM[i] = revRPM[i]*0.9;
     }
     idleTime_ms = idleTimeSet_ms[firingMode];
@@ -166,13 +166,13 @@ void loop()
     }
     //set firingMode from selector switch
     if(select1.isPressed()){
-        firingMode = 0;
+        firingMode = 1;
     }
     else if(select2.isPressed()){
         firingMode = 2;
     }
     else {
-        firingMode = 1;
+        firingMode = 0;
     }
     //changes burst options
     burstLength = burstLengthSet[firingMode];
