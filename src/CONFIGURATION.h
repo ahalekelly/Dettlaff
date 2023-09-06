@@ -19,11 +19,13 @@ uint32_t BufferModeSet[3] = { 0, 1, 1 };
 uint32_t motorKv = 3200;
 uint32_t batteryADC_mv = 14800 / 11; // battery voltage in mv divided by voltage divider ratio (11)
 dshot_mode_t dshotMode = DSHOT300; // Options are DSHOT150, DSHOT300, DSHOT600, or DSHOT_OFF. DSHOT300 is recommended, DSHOT150 does not work with either AM32 ESCs or closed loop control, and DSHOT600 seems less reliable. DSHOT_OFF falls back to servo PWM
+bidirectional_mode_e dshotBidirectional = ENABLE_BIDIRECTION;
 
 // Dettlaff Settings
 char wifiSsid[32] = "network name";
 char wifiPass[63] = "password";
 uint32_t wifiDuration_ms = 10 * 60 * 1000; // how long before wifi turns off to save power. default is 10 min
+uint32_t printTelemetry = false; // output telemetry over USB serial port for tuning
 
 pins_t pins = pins_v0_7; // select the one that matches your board revision
 // Options:

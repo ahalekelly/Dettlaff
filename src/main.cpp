@@ -40,6 +40,8 @@ Driver* pusher;
 bool wifiState = false;
 // String telemBuffer = "";
 int8_t telemMotorNum = -1; // 0-3
+uint32_t triggerTime_us = 0;
+uint32_t tempRPM;
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
@@ -61,7 +63,7 @@ void WiFiInit();
 
 void setup()
 {
-    Serial.begin(115200);
+    Serial.begin(460800);
     Serial.println("Booting");
     if (pins.flywheel) {
         pinMode(pins.flywheel, OUTPUT);
@@ -127,7 +129,7 @@ void setup()
         servo[3].attach(pins.esc4);
     } else {
         for (int i = 0; i < numMotors; i++) {
-            dshot[i].begin(dshotMode, ENABLE_BIDIRECTION, 14); // bitrate, bidirectional, and motor pole count
+            dshot[i].begin(dshotMode, dshotBidirectional, 14); // bitrate, bidirectional, and motor pole count
         }
     }
 
@@ -160,9 +162,11 @@ void setup()
     idleTime_ms = idleTimeSet_ms[firingMode];
     firingDelay_ms = firingDelaySet_ms[firingMode];
 
-    delay(100);
+    if (wifiDuration_ms > 0) {
+        WiFiInit();
+    }
 
-    WiFiInit();
+    delay(100);
 }
 
 void loop()
@@ -221,6 +225,7 @@ void loop()
 
     case STATE_IDLE:
         if (triggerSwitch.pressed() || revSwitch.isPressed()) {
+            triggerTime_us = loopStartTimer_us;
             targetRPM = &revRPM;
             lastRevTime_ms = time_ms;
             flywheelState = STATE_ACCELERATING;
@@ -350,6 +355,12 @@ void loop()
         //    Serial.println("");
     } else {
         for (int8_t i = 0; i < numMotors; i++) {
+            if (dshotBidirectional == ENABLE_BIDIRECTION) {
+                tempRPM = dshot[i].get_dshot_RPM();
+                if (tempRPM > 0) { // todo: rate of change filtering
+                    motorRPM[i] = tempRPM;
+                }
+            }
             if (throttleValue[i] == 0) {
                 dshotValue = 0;
             } else {
@@ -361,11 +372,27 @@ void loop()
                 dshot[i].send_dshot_value(dshotValue, NO_TELEMETRIC);
             }
         }
+        if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && triggerTime_us != 0 && loopStartTimer_us - triggerTime_us < 250000) {
+            Serial.print((loopStartTimer_us - triggerTime_us) / 1000);
+            Serial.print(" ");
+            Serial.print(analogRead(pins.batteryADC));
+            Serial.print(" ");
+            Serial.print(throttleValue[0]);
+            Serial.print(" ");
+            Serial.print(motorRPM[0]);
+            Serial.print(" ");
+            Serial.print(motorRPM[1]);
+            Serial.print(" ");
+            Serial.println();
+        }
     }
     if (wifiState == true) {
-        if (time_ms > wifiDuration_ms) {
+        if (time_ms > wifiDuration_ms || flywheelState != STATE_IDLE) {
             wifiState = false;
             Serial.println("Wifi turning off");
+            ArduinoOTA.end();
+            WiFi.disconnect(true); // Disconnect from the network
+            WiFi.mode(WIFI_OFF); // Switch WiFi off
         } else {
             ArduinoOTA.handle();
         }
