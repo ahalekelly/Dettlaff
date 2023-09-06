@@ -1,14 +1,24 @@
 #include "DShotRMT.h" // We need this for the dshot modes
 #include "boards_config.h" // board pinouts are in this file. you can check and modify which switch is on which pin there.
 
+//Selector settings ON BOOT, locked after booting
+uint32_t revRPMset[3][2] = { { 50000, 50000, 50000, 50000 }, { 25000, 25000, 25000, 25000 },  { 14000, 14000, 14000, 14000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
+uint32_t idleRPMset[3][2] = { { 25000, 25000, 25000, 25000 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 } }; // adjust this to change idleRPM, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
+uint32_t idleTimeSet_ms[3] = { 0, 0, 15000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds, for firingMode 1, 2, 3
+uint32_t firingDelaySet_ms[3] = {150, 75, 50}; // delay to allow flywheels to spin up before firing dart for firingMode 1, 2, 3
+
+//Live selector settings, change with switch
+uint32_t burstLengthSet[3] = { 300, 3, 1 };
+uint32_t BufferModeSet[3] = { 0, 1, 1 };
+// 0 = stop firing when trigger is released
+// 1 = complete current burst when trigger is released
+// 2 = fire as many bursts as trigger pulls
+// for full auto, set burstLength high (50+) and bufferMode = 0
+
 // Flywheel Settings
-uint32_t revRPM[4] = { 50000, 50000, 50000, 50000 }; // adjust this to change fps
-uint32_t idleRPM[4] = { 1000, 1000, 1000, 1000 };
-uint32_t idleTime_ms = 60000; // how long to idle the flywheels for after releasing the trigger, in milliseconds
 uint32_t motorKv = 3200;
 uint32_t batteryADC_mv = 14800 / 11; // battery voltage in mv divided by voltage divider ratio (11)
-dshot_mode_t dshotMode = DSHOT150; // DSHOT150 for dshot, or DSHOT_OFF to fall back to servo PWM
-bool am32ESC = false;
+dshot_mode_t dshotMode = DSHOT300; // Options are DSHOT150, DSHOT300, DSHOT600, or DSHOT_OFF. DSHOT300 is recommended, DSHOT150 does not work with either AM32 ESCs or closed loop control, and DSHOT600 seems less reliable. DSHOT_OFF falls back to servo PWM
 
 // Dettlaff Settings
 char wifiSsid[32] = "network name";
@@ -30,23 +40,16 @@ pins_t pins = pins_v0_7; // select the one that matches your board revision
 // pins_v0_1
 
 // Pusher Settings
-pusherType_t pusherType = PUSHER_SOLENOID_OPENLOOP; // either PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
-uint16_t burstLength = 3;
-uint8_t bufferMode = 1;
-// 0 = stop firing when trigger is released
-// 1 = complete current burst when trigger is released
-// 2 = fire as many bursts as trigger pulls
-// for full auto, set burstLength high (50+) and bufferMode = 0
-uint16_t firingDelay_ms = 100; // delay to allow flywheels to spin up before firing dart
+pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP; // either PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
 uint16_t solenoidExtendTime_ms = 20;
 uint16_t solenoidRetractTime_ms = 35;
 bool pusherReverseDirection = false; // make motor spin backwards? v0.5 & v0.6 (hBridgeDriver) need this to be false or the pusher logic is inverted? and the v0.2 - v0.4 at8870 pusher seems to need this to be true for reverse polarity braking to work?
-uint8_t pusherReversePolarityDuration_ms = 10;
-bool pusherReverseOnOverrun = false;
+uint8_t pusherReversePolarityDuration_ms = 0; // try increasing this if your pusher doesn't stop at the right position because your pusher motor takes too long to stop. 10ms was good for my FDL with cheap pusher motor
+bool pusherReverseOnOverrun = false; // these two settings don't seem to work properly
 bool pusherEndReverseBrakingEarly = false;
 
 // Advanced Settings
-uint16_t pusherStallTime_ms = 1000; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?
+uint16_t pusherStallTime_ms = 500; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?
 uint8_t numMotors = 4; // leave at 4 until we have closed loop control
 uint16_t spindownSpeed = 1; // higher number makes the flywheels spin down faster after you release the trigger
 bool revSwitchNormallyClosed = false; // invert switch signal?
@@ -56,8 +59,6 @@ uint16_t debounceTime_ms = 25;
 char AP_SSID[32] = "Dettlaff";
 char AP_PW[32] = "KellyIndu";
 uint16_t targetLoopTime_us = 1000; // microseconds
-// for closed loop flywheel mode only - not implemented yet
-uint32_t firingRPM[4] = { revRPM[0] * 9 / 10, revRPM[1] * 9 / 10, revRPM[2] * 9 / 10, revRPM[3] * 9 / 10 };
 float maxDutyCycle_pct = 98;
 uint8_t deadtime = 10;
 uint16_t pwmFreq_hz = 20000;
