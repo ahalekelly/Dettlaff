@@ -21,8 +21,8 @@ uint32_t batteryADC_mv = 14800 / 11; // battery voltage in mv divided by voltage
 dshot_mode_t dshotMode = DSHOT150; // DSHOT150 for dshot, or DSHOT_OFF to fall back to servo PWM
 
 // Dettlaff Settings
-char wifiSsid[32] = "SSID";
-char wifiPass[63] = "PASS";
+char wifiSsid[32] = "network name";
+char wifiPass[63] = "password";
 
 pins_t pins = pins_v0_5; // select the one that matches your board revision
 // Options:
