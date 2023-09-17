@@ -21,6 +21,12 @@ enum pusherDriverType_t {
     HBRIDGE_DRIVER,
 };
 
+enum selectFireType_t {
+    NO_SELECT_FIRE,
+    SWITCH_SELECT_FIRE,
+    BUTTON_SELECT_FIRE
+};
+
 typedef struct {
     pusherDriverType_t pusherDriverType;
     bool pusherCoastHigh;

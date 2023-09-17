@@ -15,6 +15,9 @@ uint32_t BufferModeSet[3] = { 0, 1, 1 };
 // 2 = fire as many bursts as trigger pulls
 // for full auto, set burstLength high (50+) and bufferMode = 0
 
+selectFireType_t selectFireType = SWITCH_SELECT_FIRE; // pick NO_SELECT_FIRE, SWITCH_SELECT_FIRE, or BUTTON_SELECT_FIRE
+uint8_t defaultFiringMode = 1; // only for SWITCH_SELECT_FIRE, what mode to select if no pins are connected
+
 // Flywheel Settings
 uint32_t motorKv = 3200;
 uint32_t batteryADC_mv = 14800 / 11; // battery voltage in mv divided by voltage divider ratio (11)
@@ -31,7 +34,8 @@ uint32_t printTelemetry = false; // output telemetry over USB serial port for tu
 uint8_t triggerSwitchPin = 32; // main trigger pin
 uint8_t revSwitchPin = 15; // optional rev trigger
 uint8_t cycleSwitchPin = 23; // pusher motor home switch
-uint8_t select1Pin = 25; // optional for select fire
+uint8_t select0Pin = 25; // optional for select fire
+uint8_t select1Pin = 0; // optional for select fire
 uint8_t select2Pin = 33; // optional for select fire
 
 boards_t board = board_v0_7; // select the one that matches your board revision

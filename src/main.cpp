@@ -47,6 +47,7 @@ Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
 Bounce2::Button cycleSwitch = Bounce2::Button();
 Bounce2::Button button = Bounce2::Button();
+Bounce2::Button select0 = Bounce2::Button();
 Bounce2::Button select1 = Bounce2::Button();
 Bounce2::Button select2 = Bounce2::Button();
 
@@ -60,6 +61,7 @@ DShotRMT dshot[4] = {
 };
 
 void WiFiInit();
+void updateFiringMode();
 
 void setup()
 {
@@ -107,15 +109,22 @@ void setup()
         cycleSwitch.interval(debounceTime_ms);
         cycleSwitch.setPressedState(cycleSwitchNormallyClosed);
     }
-    if (select1Pin) {
-        select1.attach(select1Pin, INPUT_PULLUP);
-        select1.interval(debounceTime_ms);
-        select1.setPressedState(false);
-    }
-    if (select2Pin) {
-        select2.attach(select2Pin, INPUT_PULLUP);
-        select2.interval(debounceTime_ms);
-        select2.setPressedState(false);
+    if (selectFireType != NO_SELECT_FIRE) {
+        if (select0Pin) {
+            select0.attach(select0Pin, INPUT_PULLUP);
+            select0.interval(debounceTime_ms);
+            select0.setPressedState(false);
+        }
+        if (select1Pin) {
+            select1.attach(select1Pin, INPUT_PULLUP);
+            select1.interval(debounceTime_ms);
+            select1.setPressedState(false);
+        }
+        if (select2Pin) {
+            select2.attach(select2Pin, INPUT_PULLUP);
+            select2.interval(debounceTime_ms);
+            select2.setPressedState(false);
+        }
     }
 
     if (dshotMode == DSHOT_OFF) {
@@ -138,22 +147,9 @@ void setup()
         delayMicroseconds(30);
         digitalWrite(board.nSleep, HIGH);
     }
+    updateFiringMode();
 
-    // set firingMode
-    if (select1Pin) {
-        select1.update();
-    }
-    if (select2Pin) {
-        select2.update();
-    }
-    if (select1.isPressed()) {
-        firingMode = 1;
-    } else if (select2.isPressed()) {
-        firingMode = 2;
-    } else {
-        firingMode = 0;
-    }
-    // changeFPS on boot by firing mode
+    // change FPS using select fire switch position at boot time
     for (int i = 0; i < numMotors; i++) {
         revRPM[i] = revRPMset[firingMode][i];
         idleRPM[i] = idleRPMset[firingMode][i];
@@ -179,20 +175,7 @@ void loop()
     if (triggerSwitchPin) {
         triggerSwitch.update();
     }
-    if (select1Pin) {
-        select1.update();
-    }
-    if (select2Pin) {
-        select2.update();
-    }
-    // set firingMode from selector switch
-    if (select1.isPressed()) {
-        firingMode = 1;
-    } else if (select2.isPressed()) {
-        firingMode = 2;
-    } else {
-        firingMode = 0;
-    }
+    updateFiringMode();
     // changes burst options
     burstLength = burstLengthSet[firingMode];
     bufferMode = BufferModeSet[firingMode];
@@ -403,6 +386,38 @@ void loop()
         Serial.println(loopTime_us);
     } else {
         delayMicroseconds(max((long)(0), (long)(targetLoopTime_us - loopTime_us)));
+    }
+}
+
+void updateFiringMode()
+{
+    if (selectFireType == NO_SELECT_FIRE) {
+        return;
+    }
+    if (select0Pin) {
+        select0.update();
+        if (select0.isPressed()) {
+            firingMode = 0;
+            return;
+        }
+    }
+    if (select1Pin) {
+        select1.update();
+        if (select1.isPressed()) {
+            firingMode = 1;
+            return;
+        }
+    }
+    if (select2Pin) {
+        select2.update();
+        if (select2.isPressed()) {
+            firingMode = 2;
+            return;
+        }
+    }
+    if (selectFireType == SWITCH_SELECT_FIRE) { // if BUTTON_SELECT_FIRE then don't change modes
+        firingMode = defaultFiringMode;
+        return;
     }
 }
 
