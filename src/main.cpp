@@ -26,7 +26,7 @@ uint32_t firingRPM[4];
 uint32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
 uint16_t burstLength; // stores value from burstLengthSet for current firing mode
 uint8_t bufferMode; // stores value from bufferModeSet for current firing mode
-int8_t firingMode; // stores value from firingModeSet for current firing mode
+int8_t firingMode = 0; // stores value from firingModeSet for current firing mode
 uint32_t dshotValue = 0;
 int16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
@@ -67,14 +67,6 @@ void setup()
 {
     Serial.begin(460800);
     Serial.println("Booting");
-    if (board.flywheel) {
-        pinMode(board.flywheel, OUTPUT);
-        digitalWrite(board.flywheel, HIGH);
-    }
-    if (board.nSleep) {
-        pinMode(board.nSleep, OUTPUT);
-        digitalWrite(board.nSleep, HIGH);
-    }
 
     switch (board.pusherDriverType) {
     case HBRIDGE_DRIVER:
@@ -142,11 +134,6 @@ void setup()
         }
     }
 
-    if (board.nSleep) {
-        digitalWrite(board.nSleep, LOW);
-        delayMicroseconds(30);
-        digitalWrite(board.nSleep, HIGH);
-    }
     updateFiringMode();
 
     // change FPS using select fire switch position at boot time
@@ -162,7 +149,18 @@ void setup()
         WiFiInit();
     }
 
-    delay(100);
+    if (board.flywheel) {
+        pinMode(board.flywheel, OUTPUT);
+        digitalWrite(board.flywheel, HIGH);
+    }
+    if (board.nSleep) {
+        pinMode(board.nSleep, OUTPUT);
+        digitalWrite(board.nSleep, HIGH);
+        delayMicroseconds(1000);
+        digitalWrite(board.nSleep, LOW);
+        delayMicroseconds(30);
+        digitalWrite(board.nSleep, HIGH);
+    }
 }
 
 void loop()
