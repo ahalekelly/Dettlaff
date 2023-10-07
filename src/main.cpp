@@ -153,6 +153,13 @@ void setup()
         pinMode(board.flywheel, OUTPUT);
         digitalWrite(board.flywheel, HIGH);
     }
+
+    for (int count = 0; count < 10000; count++) {
+        for (uint8_t i = 0; i < numMotors; i++) {
+            dshot[i].send_dshot_value(0, NO_TELEMETRIC);
+        }
+    }
+
     if (board.nSleep) {
         pinMode(board.nSleep, OUTPUT);
         digitalWrite(board.nSleep, HIGH);
@@ -299,7 +306,6 @@ void loop()
                 } else if (firing && time_ms > pusherTimer_ms + solenoidExtendTime_ms) { // retract solenoid
                     pusher->coast();
                     firing = false;
-                    flywheelState = STATE_IDLE; // check later
                     pusherTimer_ms = time_ms;
                     Serial.println("solenoid retracting");
                 }

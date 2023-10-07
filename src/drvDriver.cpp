@@ -18,7 +18,7 @@ Drv::Drv(uint8_t pin1, uint8_t pin2, uint32_t pwmFrequency, bool coastHigh)
     ledcWrite(2, 0);
 }
 
-void Drv::drive(float dutyCycle, bool reverseDirection) // dutyCycle is ignored - always runs full speed
+void Drv::drive(float dutyCycle, bool reverseDirection)
 {
     uint32_t m_dutyCycleInt = min(ledc_max_value, max((uint32_t)0, static_cast<uint32_t>(dutyCycle * ledc_max_value / 100)));
     if (reverseDirection) {
@@ -36,7 +36,7 @@ void Drv::brake() // brake and coast are swapped for the DRV8243
         ledcWrite(1, 0);
         ledcWrite(2, 0);
     } else {
-        ledcWrite(1, ledc_max_value); // TODO: check on scope that this actually is full on
+        ledcWrite(1, ledc_max_value);
         ledcWrite(2, ledc_max_value);
     }
 }
@@ -44,7 +44,7 @@ void Drv::brake() // brake and coast are swapped for the DRV8243
 void Drv::coast()
 {
     if (m_coastHigh) {
-        ledcWrite(1, ledc_max_value); // TODO: check on scope that this actually is full on
+        ledcWrite(1, ledc_max_value);
         ledcWrite(2, ledc_max_value);
     } else {
         ledcWrite(1, 0);
