@@ -145,10 +145,6 @@ void setup()
     idleTime_ms = idleTimeSet_ms[firingMode];
     firingDelay_ms = firingDelaySet_ms[firingMode];
 
-    if (wifiDuration_ms > 0) {
-        WiFiInit();
-    }
-
     if (board.flywheel) {
         pinMode(board.flywheel, OUTPUT);
         digitalWrite(board.flywheel, HIGH);
@@ -167,6 +163,10 @@ void setup()
         digitalWrite(board.nSleep, LOW);
         delayMicroseconds(30);
         digitalWrite(board.nSleep, HIGH);
+    }
+
+    if (wifiDuration_ms > 0) {
+        WiFiInit();
     }
 }
 
