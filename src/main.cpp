@@ -9,6 +9,7 @@
 #include "types.h"
 #include <Arduino.h>
 #include <ArduinoOTA.h>
+#include <ESP32AnalogRead.h>
 #include <esp_wifi.h>
 
 uint32_t loopStartTimer_us = micros();
@@ -33,7 +34,8 @@ flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
 bool reverseBraking = false;
 bool closedLoopFlywheels = false;
-uint32_t scaledMotorKv = motorKv * 11; // motor kv * battery voltage resistor divider ratio
+uint32_t batteryADC_mv = 0;
+uint32_t batteryVoltage_mv = 14800;
 const uint32_t maxThrottle = 1999;
 uint32_t motorRPM[4] = { 0, 0, 0, 0 };
 Driver* pusher;
@@ -42,6 +44,7 @@ bool wifiState = false;
 int8_t telemMotorNum = -1; // 0-3
 uint32_t triggerTime_us = 0;
 uint32_t tempRPM;
+ESP32AnalogRead batteryADC;
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
@@ -164,6 +167,8 @@ void setup()
         delayMicroseconds(30);
         digitalWrite(board.nSleep, HIGH);
     }
+
+    batteryADC.attach(board.batteryADC);
 
     if (wifiDuration_ms > 0) {
         WiFiInit();
@@ -314,15 +319,19 @@ void loop()
         }
         break;
     }
+    batteryADC_mv = batteryADC.readMiliVolts();
+    batteryVoltage_mv = (batteryADC_mv * 11 * (100 - voltageSmoothingFactor) + batteryVoltage_mv * voltageSmoothingFactor) / 100; // apply exponential moving average to smooth out noise
+
+    Serial.println(batteryVoltage_mv);
 
     if (closedLoopFlywheels) {
         // PID control code goes here
     } else { // open loop case
         for (int i = 0; i < numMotors; i++) {
             if (throttleValue[i] == 0) {
-                throttleValue[i] = min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryADC_mv * 1000 / scaledMotorKv);
+                throttleValue[i] = min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv);
             } else {
-                throttleValue[i] = max(min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryADC_mv * 1000 / scaledMotorKv),
+                throttleValue[i] = max(min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv),
                     throttleValue[i] - spindownSpeed);
             }
         }
@@ -362,7 +371,7 @@ void loop()
         if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && triggerTime_us != 0 && loopStartTimer_us - triggerTime_us < 250000) {
             Serial.print((loopStartTimer_us - triggerTime_us) / 1000);
             Serial.print(" ");
-            Serial.print(analogRead(board.batteryADC));
+            Serial.print(batteryVoltage_mv);
             Serial.print(" ");
             Serial.print(throttleValue[0]);
             Serial.print(" ");

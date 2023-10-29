@@ -20,7 +20,6 @@ uint8_t defaultFiringMode = 1; // only for SWITCH_SELECT_FIRE, what mode to sele
 
 // Flywheel Settings
 uint32_t motorKv = 3200;
-uint32_t batteryADC_mv = 14800 / 11; // battery voltage in mv divided by voltage divider ratio (11)
 dshot_mode_t dshotMode = DSHOT300; // Options are DSHOT150, DSHOT300, DSHOT600, or DSHOT_OFF. DSHOT300 is recommended, DSHOT150 does not work with either AM32 ESCs or closed loop control, and DSHOT600 seems less reliable. DSHOT_OFF falls back to servo PWM
 bidirectional_mode_e dshotBidirectional = ENABLE_BIDIRECTION;
 
@@ -69,6 +68,7 @@ bool revSwitchNormallyClosed = false; // invert switch signal?
 bool triggerSwitchNormallyClosed = false;
 bool cycleSwitchNormallyClosed = false;
 uint16_t debounceTime_ms = 25;
+uint32_t voltageSmoothingFactor = 90; // from 0 to 99, how much averaging to apply to the battery voltage reading (exponential moving average)
 char AP_SSID[32] = "Dettlaff";
 char AP_PW[32] = "KellyIndu";
 uint16_t targetLoopTime_us = 1000; // microseconds
