@@ -14,6 +14,7 @@ const boards_t board_v0_7 = {
     .telem = 16,
     .button = 0,
     .batteryADC = 35,
+    .pusherShunt = 14,
 };
 
 const boards_t board_v0_5 = {

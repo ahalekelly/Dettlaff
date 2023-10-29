@@ -69,6 +69,7 @@ bool triggerSwitchNormallyClosed = false;
 bool cycleSwitchNormallyClosed = false;
 uint16_t debounceTime_ms = 25;
 uint32_t voltageSmoothingFactor = 90; // from 0 to 99, how much averaging to apply to the battery voltage reading (exponential moving average)
+uint32_t pusherCurrentSmoothingFactor = 90;
 char AP_SSID[32] = "Dettlaff";
 char AP_PW[32] = "KellyIndu";
 uint16_t targetLoopTime_us = 1000; // microseconds

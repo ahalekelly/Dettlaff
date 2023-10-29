@@ -43,6 +43,7 @@ typedef struct {
     int8_t telem;
     int8_t button;
     int8_t batteryADC;
+    int8_t pusherShunt;
 } boards_t;
 
 #endif
