@@ -28,6 +28,7 @@ char wifiSsid[32] = "network name";
 char wifiPass[63] = "password";
 uint32_t wifiDuration_ms = 10 * 60 * 1000; // how long before wifi turns off to save power. default is 10 min
 uint32_t printTelemetry = false; // output telemetry over USB serial port for tuning
+uint32_t lowVoltageCutoff_mv = 13500;
 
 // Input Pins, set to 0 if not using
 uint8_t triggerSwitchPin = 32; // main trigger pin
@@ -53,6 +54,8 @@ boards_t board = board_v0_7; // select the one that matches your board revision
 
 // Pusher Settings
 pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP; // either PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
+uint32_t pusherVoltage_mv = 14000; // if battery voltage is above this voltage, then use PWM to reduce the voltage that the pusher sees
+uint32_t pusherReverseBrakingVoltage_mv = 14000;
 uint16_t solenoidExtendTime_ms = 20;
 uint16_t solenoidRetractTime_ms = 35;
 bool pusherReverseDirection = false; // make motor spin backwards? v0.5 & v0.6 (hBridgeDriver) need this to be false or the pusher logic is inverted? and the v0.2 - v0.4 at8870 pusher seems to need this to be true for reverse polarity braking to work?

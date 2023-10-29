@@ -222,6 +222,9 @@ void loop()
 
     case STATE_IDLE:
         if (triggerSwitch.pressed() || revSwitch.isPressed()) {
+            if (throttleValue[0] == 0 && batteryVoltage_mv < lowVoltageCutoff_mv) { // TODO: this is a hack, implement proper low battery sleep mode later
+                break;
+            }
             triggerTime_us = loopStartTimer_us;
             targetRPM = &revRPM;
             lastRevTime_ms = time_ms;
@@ -255,7 +258,7 @@ void loop()
             case PUSHER_MOTOR_CLOSEDLOOP:
                 cycleSwitch.update();
                 if (shotsToFire > 0 && !firing) { // start pusher stroke
-                    pusher->drive(100, pusherReverseDirection);
+                    pusher->drive(100.0 * pusherVoltage_mv / batteryVoltage_mv, pusherReverseDirection); // drive function clamps the input so it's ok if it's over 100
                     firing = true;
                     pusherTimer_ms = time_ms;
                 } else if (firing && cycleSwitch.pressed()) { // when the pusher reaches rear position
@@ -263,7 +266,7 @@ void loop()
                     pusherTimer_ms = time_ms;
                     if (shotsToFire <= 0) { // brake pusher
                         if (pusherReversePolarityDuration_ms > 0) {
-                            pusher->drive(100, !pusherReverseDirection); // drive motor backwards to stop faster
+                            pusher->drive(100.0 * pusherReverseBrakingVoltage_mv / batteryVoltage_mv, !pusherReverseDirection); // drive motor backwards to stop faster
                             reverseBraking = true;
                             //                  firing = false; this doesn't work because this pusher control routine only runs when the flywheels are running, so this causes reverse braking to never end. refactor later?
                         } else {
