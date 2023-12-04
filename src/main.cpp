@@ -47,7 +47,7 @@ int8_t telemMotorNum = -1; // 0-3
 uint32_t triggerTime_us = 0;
 uint32_t tempRPM;
 ESP32AnalogRead batteryADC;
-ESP32AnalogRead pusherShuntADC;
+// ESP32AnalogRead pusherShuntADC;
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
@@ -172,7 +172,7 @@ void setup()
     }
 
     batteryADC.attach(board.batteryADC);
-    pusherShuntADC.attach(board.pusherShunt);
+    // pusherShuntADC.attach(board.pusherShunt);
 
     if (wifiDuration_ms > 0) {
         WiFiInit();
@@ -329,11 +329,11 @@ void loop()
     batteryADC_mv = batteryADC.readMiliVolts();
     batteryVoltage_mv = (batteryADC_mv * 11 * (100 - voltageSmoothingFactor) + batteryVoltage_mv * voltageSmoothingFactor) / 100; // apply exponential moving average to smooth out noise
 
-    pusherShunt_mv = pusherShuntADC.readMiliVolts();
-    pusherCurrent_ma = (pusherShunt_mv * 3070 / 1000 * (100 - pusherCurrentSmoothingFactor) + pusherCurrent_ma * pusherCurrentSmoothingFactor) / 100;
+    // pusherShunt_mv = pusherShuntADC.readMiliVolts();
+    // pusherCurrent_ma = (pusherShunt_mv * 3070 / 1000 * (100 - pusherCurrentSmoothingFactor) + pusherCurrent_ma * pusherCurrentSmoothingFactor) / 100;
 
     Serial.println(batteryVoltage_mv);
-    Serial.println(pusherCurrent_ma);
+    // Serial.println(pusherCurrent_ma);
 
     if (closedLoopFlywheels) {
         // PID control code goes here
