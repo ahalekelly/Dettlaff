@@ -3,8 +3,8 @@
 
 //Selector settings ON BOOT, locked after booting
 uint32_t revRPMset[3][4] = { { 50000, 50000, 50000, 50000 }, { 25000, 25000, 25000, 25000 },  { 14000, 14000, 14000, 14000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
-uint32_t idleRPMset[3][4] = { { 25000, 25000, 25000, 25000 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 } }; // adjust this to change idleRPM, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
-uint32_t idleTimeSet_ms[3] = { 0, 0, 15000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds, for firingMode 1, 2, 3
+uint32_t idleRPMset[3][4] = { { 1500, 1500, 1500, 1500 }, { 1500, 1500, 1500, 1500 }, { 1500, 1500, 1500, 1500 } }; // adjust this to change idleRPM, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
+uint32_t idleTimeSet_ms[3] = { 5000, 5000, 5000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds, for firingMode 1, 2, 3
 uint32_t firingDelaySet_ms[3] = {150, 75, 50}; // delay to allow flywheels to spin up before firing dart for firingMode 1, 2, 3
 
 //Live selector settings, change with switch
@@ -38,8 +38,10 @@ uint8_t select0Pin = 25; // optional for select fire
 uint8_t select1Pin = 0; // optional for select fire
 uint8_t select2Pin = 33; // optional for select fire
 
-boards_t board = board_v0_7; // select the one that matches your board revision
+boards_t board = board_v0_9; // select the one that matches your board revision
 // Options:
+// board_v0_9
+// board_v0_8
 // board_v0_7
 // board_v0_6
 // board_v0_5

@@ -329,10 +329,11 @@ void loop()
     batteryADC_mv = batteryADC.readMiliVolts();
     batteryVoltage_mv = (batteryADC_mv * 11 * (100 - voltageSmoothingFactor) + batteryVoltage_mv * voltageSmoothingFactor) / 100; // apply exponential moving average to smooth out noise
 
+    // Serial.println(batteryVoltage_mv);
+
     // pusherShunt_mv = pusherShuntADC.readMiliVolts();
     // pusherCurrent_ma = (pusherShunt_mv * 3070 / 1000 * (100 - pusherCurrentSmoothingFactor) + pusherCurrent_ma * pusherCurrentSmoothingFactor) / 100;
 
-    Serial.println(batteryVoltage_mv);
     // Serial.println(pusherCurrent_ma);
 
     if (closedLoopFlywheels) {

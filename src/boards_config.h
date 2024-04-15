@@ -17,6 +17,9 @@ const boards_t board_v0_7 = {
     .pusherShunt = 14,
 };
 
+const boards_t board_v0_8 = board_v0_7;
+const boards_t board_v0_9 = board_v0_7;
+
 const boards_t board_v0_5 = {
     .pusherDriverType = HBRIDGE_DRIVER,
     .flywheel = 2,
