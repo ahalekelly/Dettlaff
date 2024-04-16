@@ -222,8 +222,9 @@ void loop()
 
     case STATE_IDLE:
         if (triggerSwitch.pressed() || revSwitch.isPressed()) {
-            if (throttleValue[0] == 0 && batteryVoltage_mv < lowVoltageCutoff_mv) { // TODO: this is a hack, implement proper low battery sleep mode later
-                break;
+            if (throttleValue[0] == 0 && batteryVoltage_mv < lowVoltageCutoff_mv) { // untested
+                digitalWrite(board.flywheel, LOW); // cut power to ESCs and pusher
+                esp_deep_sleep_start(); // go to sleep and never wake up
             }
             triggerTime_us = loopStartTimer_us;
             targetRPM = &revRPM;
