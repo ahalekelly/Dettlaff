@@ -30,5 +30,4 @@ Dettlaff should enter upload mode automatically, but if it doesn't, the button o
 * If you have a power switch, solder it between the - pin and the SHDN (shutdown) pin
 
 Solder your Dettlaff to the ESC and LiPo battery like below. The ground wire should go from the battery to the ESC, then from the ESC to the Dettlaff. Use the capacitors that come with the Dettlaff and the ESC. Use of other capacitors with lower capacity or higher ESR could result in damage and will void your warranty
-![imgonline-com-ua-twotoone-Wsix1iZHA9Tr](https://github.com/ahalekelly/Dettlaff/assets/7078138/bc41cb2d-2a0c-4776-aa7a-90f027a5619e)
-
+![imgonline-com-ua-twotoone-U4kocRnWdYJE](https://github.com/ahalekelly/Dettlaff/assets/7078138/e3eaaa93-7a96-4e7d-b4a4-82774174daa4)
