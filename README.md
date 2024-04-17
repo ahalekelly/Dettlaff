@@ -26,8 +26,9 @@ Dettlaff should enter upload mode automatically, but if it doesn't, the button o
 ## Wiring
 * Look up in boards_config.h which pins to use for your version of Dettlaff
 * Connect each switch between the numbered pin (yellow wire) and the - pin (black wire) on each connector
-* Before plugging in your ESC, double check that all the pins on the ESC output match the pins on the ESC! **ESC connectors are not standardized and you can fry your Dettlaff!**
+* Dettlaff is designed for the ESCs that we sell, but ESC connectors are not standardized. If you are using a different ESC, double check that all the pins on the ESC output match the pins on the ESC before connecting them! **This can fry your Dettlaff!**
 * If you have a power switch, solder it between the - pin and the SHDN (shutdown) pin
-
-Solder your Dettlaff to the ESC and LiPo battery like below. The ground wire should go from the battery to the ESC, then from the ESC to the Dettlaff. Use the capacitors that come with the Dettlaff and the ESC. Use of other capacitors with lower capacity or higher ESR could result in damage and will void your warranty
+* Solder your Dettlaff to the ESC and LiPo battery like below. The ground wire should go from the battery to the ESC, then from the ESC to the Dettlaff
 ![imgonline-com-ua-twotoone-U4kocRnWdYJE](https://github.com/ahalekelly/Dettlaff/assets/7078138/e3eaaa93-7a96-4e7d-b4a4-82774174daa4)
+
+* Use the capacitors that came with the Dettlaff and the ESC. Use of capacitors with lower capacity or higher ESR could result in damage and will void your warranty
