@@ -345,7 +345,7 @@ void loop()
                 throttleValue[i] = min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv);
             } else {
                 throttleValue[i] = max(min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv),
-                    throttleValue[i] - spindownSpeed);
+                    throttleValue[i] - 1);
             }
         }
     }
