@@ -153,7 +153,9 @@ void setup()
 
     if (board.flywheel) {
         pinMode(board.flywheel, OUTPUT);
-        digitalWrite(board.flywheel, HIGH);
+        if (!brushedFlywheels) {
+            digitalWrite(board.flywheel, HIGH);
+        }
     }
 
     for (int count = 0; count < 10000; count++) {
@@ -351,7 +353,13 @@ void loop()
     }
 
     // send signal to ESCs
-    if (dshotMode == DSHOT_OFF) {
+    if (brushedFlywheels) {
+        if ((*targetRPM)[0] > 0) {
+            digitalWrite(board.flywheel, HIGH);
+        } else {
+            digitalWrite(board.flywheel, LOW);
+        }
+    } else if (dshotMode == DSHOT_OFF) {
         for (int i = 0; i < numMotors; i++) {
             servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
             /*
