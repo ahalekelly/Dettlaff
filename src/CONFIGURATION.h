@@ -21,7 +21,7 @@ uint8_t defaultFiringMode = 1; // only for SWITCH_SELECT_FIRE, what mode to sele
 // Flywheel Settings
 uint32_t motorKv = 3200;
 dshot_mode_t dshotMode = DSHOT300; // Options are DSHOT150, DSHOT300, DSHOT600, or DSHOT_OFF. DSHOT300 is recommended, DSHOT150 does not work with either AM32 ESCs or closed loop control, and DSHOT600 seems less reliable. DSHOT_OFF falls back to servo PWM. PWM is not working, probably a ESP32 timer resource conflict with the pusher PWM circuit
-bidirectional_mode_e dshotBidirectional = ENABLE_BIDIRECTION; // NO_BIDIRECTION or ENABLE_BIDIRECTION
+bidirectional_mode_e dshotBidirectional = NO_BIDIRECTION; // NO_BIDIRECTION or ENABLE_BIDIRECTION
 bool brushedFlywheels = false; // solder a brushed motor flywheel cage to the ESC+ and Brushed Motor - pads
 
 // Dettlaff Settings
