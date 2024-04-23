@@ -74,6 +74,15 @@ void setup()
     Serial.begin(460800);
     Serial.println("Booting");
 
+    batteryADC.attach(board.batteryADC);
+    batteryADC_mv = batteryADC.readMiliVolts();
+    batteryVoltage_mv = (batteryADC_mv * 11 * (100 - voltageSmoothingFactor) + batteryVoltage_mv * voltageSmoothingFactor) / 100; // apply exponential moving average to smooth out noise
+
+    if (batteryVoltage_mv < lowVoltageCutoff_mv) {
+        Serial.println("Battery low, shutting down!");
+        esp_deep_sleep_start(); // go to sleep and never wake up
+    }
+
     switch (board.pusherDriverType) {
     case HBRIDGE_DRIVER:
         pusher = new Hbridge(board.pusher1H, board.pusher1L, board.pusher2H, board.pusher2L, maxDutyCycle_pct, pwmFreq_hz, deadtime);
@@ -173,7 +182,6 @@ void setup()
         digitalWrite(board.nSleep, HIGH);
     }
 
-    batteryADC.attach(board.batteryADC);
     // pusherShuntADC.attach(board.pusherShunt);
 
     if (wifiDuration_ms > 0) {
@@ -224,8 +232,9 @@ void loop()
 
     case STATE_IDLE:
         if (triggerSwitch.pressed() || revSwitch.isPressed()) {
-            if (throttleValue[0] == 0 && batteryVoltage_mv < lowVoltageCutoff_mv) { // untested
+            if (throttleValue[0] == 0 && batteryVoltage_mv < lowVoltageCutoff_mv) {
                 digitalWrite(board.flywheel, LOW); // cut power to ESCs and pusher
+                Serial.println("Battery low, shutting down!");
                 esp_deep_sleep_start(); // go to sleep and never wake up
             }
             triggerTime_us = loopStartTimer_us;
