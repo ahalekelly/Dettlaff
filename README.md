@@ -8,7 +8,7 @@ Dettlaff is a modular controller system for brushless flywheel Nerf blasters
 1. Install [VSCode]([https://platformio.org/install/ide?install=vscode](https://code.visualstudio.com/)) and [git](https://git-scm.com/downloads). On Windows you have to install [drivers for the CH340 USB adapter](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all#drivers-if-you-need-them)
 2. Download this repository, under the green Code button on this page, then in VSCode go to File > Open Folder and select the Dettlaff folder. If you downloaded the zip file then you need to select the inner Dettlaff folder, not the outer one. It will ask you to install the PlatformIO extension if you don't already have it
 3. Power Dettlaff from a battery, and plug the USB adapter into your computer. There are 6 pins on the programmer that connect to 6 holes on the edge of Dettlaff, line up the pin with the square pad on the programmer with the hole with the square pad on Dettlaff, and insert the pins into the holes. Use the weight of the USB cable to apply a little torque to the adapter so that the pins make good contact, or solder a female header connector into the Dettlaff holes.
-4. Update src/main.cpp with your wifi name and password, and the config settings for your blaster and then press the Upload button (arrow on the bottom toolbar)
+4. Update src/CONFIGURATION.h with your wifi name and password, and version of the board that you have, and any other settings for your blaster and then press the Upload button (arrow on the bottom toolbar)
 
 USB Troubleshooting:
 
