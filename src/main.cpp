@@ -79,7 +79,9 @@ void setup()
     batteryVoltage_mv = (batteryADC_mv * 11 * (100 - voltageSmoothingFactor) + batteryVoltage_mv * voltageSmoothingFactor) / 100; // apply exponential moving average to smooth out noise
 
     if (batteryVoltage_mv < lowVoltageCutoff_mv) {
-        Serial.println("Battery low, shutting down!");
+        Serial.print("Battery low, shutting down! ");
+        Serial.print(batteryVoltage_mv);
+        Serial.println("mv");
         esp_deep_sleep_start(); // go to sleep and never wake up
     }
 
@@ -234,7 +236,9 @@ void loop()
         if (triggerSwitch.pressed() || revSwitch.isPressed()) {
             if (throttleValue[0] == 0 && batteryVoltage_mv < lowVoltageCutoff_mv) {
                 digitalWrite(board.flywheel, LOW); // cut power to ESCs and pusher
-                Serial.println("Battery low, shutting down!");
+                Serial.print("Battery low, shutting down! ");
+                Serial.print(batteryVoltage_mv);
+                Serial.println("mv");
                 esp_deep_sleep_start(); // go to sleep and never wake up
             }
             triggerTime_us = loopStartTimer_us;
