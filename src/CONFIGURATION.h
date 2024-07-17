@@ -29,7 +29,7 @@ char wifiSsid[32] = "network name";
 char wifiPass[63] = "password";
 uint32_t wifiDuration_ms = 10 * 60 * 1000; // how long before wifi turns off to save power. default is 10 min
 uint32_t printTelemetry = false; // output telemetry over USB serial port for tuning
-uint32_t lowVoltageCutoff_mv = 9000; // esp32 voltage measurements are not very accurate
+uint32_t lowVoltageCutoff_mv = 0; // esp32 voltage measurements are not very accurate
 
 // Input Pins, set to 0 if not using
 uint8_t triggerSwitchPin = 32; // main trigger pin
