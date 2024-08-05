@@ -48,7 +48,7 @@ uint32_t tempRPM;
 ESP32AnalogRead batteryADC;
 // ESP32AnalogRead pusherShuntADC;
 
-//closed loop variables
+// closed loop variables
 int32_t PIDError[4];
 int32_t PIDErrorPrior[4];
 uint32_t closedLoopRPM[4];
@@ -255,10 +255,10 @@ void loop()
             // If ALL motors are at target RPM update the blaster's state to FULLSPEED.
             // in the future add predictive capacity for when they'll be up to speed in the future, taking into account pusher delay
             if (motorRPM[0] > firingRPM[0] && (numMotors <= 1 || motorRPM[1] > firingRPM[1]) && (numMotors <= 2 || motorRPM[2] > firingRPM[2]) && (numMotors <= 3 || motorRPM[3] > firingRPM[3])) {
-                Serial.print(time_ms-triggerTime_us/1000);
+                Serial.print(time_ms - triggerTime_us / 1000);
                 flywheelState = STATE_FULLSPEED;
             }
-        } 
+        }
         if ((!closedLoopFlywheels || timeOverride) && time_ms > lastRevTime_ms + firingDelay_ms) {
             flywheelState = STATE_FULLSPEED;
         }
@@ -353,13 +353,12 @@ void loop()
 
     if (closedLoopFlywheels) {
         // PID control code goes here
-        for (int i = 0; i < numMotors; i++) {    
-            PIDError[i] = (*targetRPM)[i]-motorRPM[i];
+        for (int i = 0; i < numMotors; i++) {
+            PIDError[i] = (*targetRPM)[i] - motorRPM[i];
 
-            PIDOutput[i] = KP*PIDError[i] + KI* (PIDIntegral+PIDError[i]*loopTime_us/1000000) + KD*(PIDError[i]-PIDErrorPrior[i])/loopTime_us*1000000;
-            closedLoopRPM[i] = PIDOutput[i]+motorRPM[i];
+            PIDOutput[i] = KP * PIDError[i] + KI * (PIDIntegral + PIDError[i] * loopTime_us / 1000000) + KD * (PIDError[i] - PIDErrorPrior[i]) / loopTime_us * 1000000;
+            closedLoopRPM[i] = PIDOutput[i] + motorRPM[i];
 
-            
             if (throttleValue[i] == 0) {
                 throttleValue[i] = min(maxThrottle, maxThrottle * closedLoopRPM[i] / batteryVoltage_mv * 1000 / motorKv);
             } else {
@@ -367,9 +366,8 @@ void loop()
                     throttleValue[i] - 1);
             }
 
-
             PIDErrorPrior[i] = PIDError[i];
-            PIDIntegral += PIDIntegral+PIDError[i]*loopTime_us/1000000;
+            PIDIntegral += PIDIntegral + PIDError[i] * loopTime_us / 1000000;
         }
     } else { // open loop case
         for (int i = 0; i < numMotors; i++) {
