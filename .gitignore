@@ -5,3 +5,4 @@ arduino_secrets.h
 *.DS_Store
 dyno-graph/dyno-graph
 dyno-graph/*.log
+dyno-graph/*.png

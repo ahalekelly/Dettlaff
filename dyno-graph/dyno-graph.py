@@ -7,6 +7,7 @@ import time
 import csv
 import sys
 import os
+import glob
 import platform
 from collections import deque
 from threading import Thread, Lock
@@ -30,8 +31,9 @@ def get_highest_port():
     return max(ports, key=lambda x: int(''.join(filter(str.isdigit, x))) if any(c.isdigit() for c in x) else 0)
 
 class DynamometerPlotter:
-    def __init__(self, log_file=None):
+    def __init__(self, log_file=None, batch_mode=False):
         self.log_file = log_file
+        self.batch_mode = batch_mode
         self.motors_present = MOTORS_PRESENT
         self.num_active_motors = sum(self.motors_present)
         self.expected_values = 2 + 2 * self.num_active_motors  # time, voltage, and (throttle, rpm) for each active motor
@@ -50,46 +52,58 @@ class DynamometerPlotter:
         self.min_throttles = [float('inf')] * 4
         self.max_throttles = [float('-inf')] * 4
         self.max_rpms = [float('-inf')] * 4
+        self.max_rpm_overall = 0  # Track the overall maximum RPM
 
         if log_file:
             print(f"Reading from log file: {log_file}")
-            self.check_motor_configuration(log_file)
+            if not self.check_motor_configuration(log_file):
+                return  # Skip this file if configuration doesn't match
             self.read_from_log()
+            self.png_file = log_file.rsplit('.', 1)[0] + '.png'
         else:
             self.serial_port = get_highest_port()
             if not self.serial_port:
                 raise ValueError("No suitable serial port found.")
             print(f"Using serial port: {self.serial_port}")
             self.ser = serial.Serial(self.serial_port, BAUD_RATE, timeout=0.1)
-            self.output_file = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S") + ".log"
+            self.output_file = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S") + ".log"
+            self.png_file = self.output_file.rsplit('.', 1)[0] + '.png'
             self.running = True
             self.data_thread = Thread(target=self.read_serial_data)
             self.data_thread.start()
 
     def check_motor_configuration(self, log_file):
         with open(log_file, 'r') as f:
-            first_line = f.readline().strip().split(',')
-            actual_values = len(first_line)
-            if actual_values != self.expected_values:
-                print(f"Warning: Motor configuration mismatch detected.")
-                print(f"Expected {self.expected_values} values based on current MOTORS_PRESENT configuration.")
-                print(f"Found {actual_values} values in the log file.")
-                
-                suggested_config = [False] * 4
-                for i in range(min(4, (actual_values - 2) // 2)):
-                    suggested_config[i] = True
-                
-                print(f"Suggested MOTORS_PRESENT configuration: {suggested_config}")
-                print("Please update the MOTORS_PRESENT configuration in the script and run again.")
-                sys.exit(1)
+            for line in f:
+                if line.strip() and not any(c.isalpha() for c in line):
+                    first_line = line.strip().split(',')
+                    actual_values = len(first_line)
+                    if actual_values != self.expected_values:
+                        print(f"Warning: Motor configuration mismatch detected in {log_file}.")
+                        print(f"Expected {self.expected_values} values based on current MOTORS_PRESENT configuration.")
+                        print(f"Found {actual_values} values in the log file.")
+                        
+                        suggested_config = [False] * 4
+                        for i in range(min(4, (actual_values - 2) // 2)):
+                            suggested_config[i] = True
+                        
+                        print(f"Suggested MOTORS_PRESENT configuration: {suggested_config}")
+                        if self.batch_mode:
+                            print("Skipping this file and moving to the next.")
+                            return False
+                        else:
+                            print("Please update the MOTORS_PRESENT configuration in the script and run again.")
+                            sys.exit(1)
+                    break  # We've found our first valid data line, so we can stop checking
         print("Motor configuration check passed.")
+        return True
 
     def read_from_log(self):
         with open(self.log_file, 'r') as f:
-            reader = csv.reader(f)
-            for row in reader:
-                if len(row) == self.expected_values and all(self.is_number(x) for x in row):
-                    self.process_data(row)
+            for row in csv.reader(f):
+                if row and not any(c.isalpha() for c in ''.join(row)):
+                    if len(row) == self.expected_values and all(self.is_number(x) for x in row):
+                        self.process_data(row)
         print(f"Finished reading log file. Total data points: {len(self.data)}")
         self.update_plot(0)  # Ensure the plot is updated after reading the log file
 
@@ -122,6 +136,7 @@ class DynamometerPlotter:
                 self.min_throttles[i] = min(self.min_throttles[i], throttle)
                 self.max_throttles[i] = max(self.max_throttles[i], throttle)
                 self.max_rpms[i] = max(self.max_rpms[i], rpm)
+                self.max_rpm_overall = max(self.max_rpm_overall, rpm)  # Update overall max RPM
                 throttle_index += 1
                 rpm_index += 1
 
@@ -146,6 +161,7 @@ class DynamometerPlotter:
             self.min_throttles = [float('inf')] * 4
             self.max_throttles = [float('-inf')] * 4
             self.max_rpms = [float('-inf')] * 4
+            self.max_rpm_overall = 0
 
     def read_serial_data(self):
         while self.running:
@@ -190,6 +206,10 @@ class DynamometerPlotter:
                 for i, (rpm, motor_present) in enumerate(zip(rpms, self.motors_present)):
                     if motor_present:
                         self.lines.append(self.ax3.plot(x, rpm, label=f'RPM {i+1}')[0])
+
+                # Save the plot as PNG
+                self.save_plot_as_png()
+
             else:
                 self.lines[0].set_data(x, voltage)
                 idx = 1
@@ -211,7 +231,12 @@ class DynamometerPlotter:
             self.ax1.set_ylabel('Battery Voltage (V)')
             self.ax2.set_ylabel('Throttle Value')
             self.ax2.set_ylim(0, 2050)  # Increased to 2050
+
+            # Set RPM y-axis limit with some headroom
+            rpm_limit = max(1000, int(self.max_rpm_overall * 1.1))  # At least 1000, or 10% above max observed RPM
+            self.ax3.set_ylim(0, rpm_limit)
             self.ax3.set_ylabel('RPM')
+
             self.ax3.set_xlabel('Time (ms)')
             
             # Update legend positions
@@ -234,9 +259,16 @@ class DynamometerPlotter:
 
         return self.lines + [self.min_max_text]
 
+    def save_plot_as_png(self):
+        if not hasattr(self, 'png_file'):
+            self.png_file = self.log_file.rsplit('.', 1)[0] + '.png' if self.log_file else 'output.png'
+        print(f"Saving plot as PNG: {self.png_file}")
+        plt.savefig(self.png_file, dpi=300, bbox_inches='tight')
+
     def run(self):
         if self.log_file:
             print("Displaying plot for log file data")
+            self.update_plot(0)  # Ensure plot is updated once for log files
             plt.show()
         else:
             print("Starting real-time plotting")
@@ -247,7 +279,21 @@ class DynamometerPlotter:
         if hasattr(self, 'data_thread'):
             self.data_thread.join()
 
+def process_all_logs():
+    log_files = glob.glob('*.log')
+    for log_file in log_files:
+        print(f"Processing {log_file}")
+        plotter = DynamometerPlotter(log_file, batch_mode=True)
+        if hasattr(plotter, 'png_file'):  # Check if initialization was successful
+            plotter.update_plot(0)  # Generate the plot
+            plotter.save_plot_as_png()  # Save the plot as PNG
+            plt.close(plotter.fig)  # Close the figure to free up memory
+    print("Finished processing all log files")
+
 if __name__ == "__main__":
-    log_file = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1].endswith('.log') else None
-    plotter = DynamometerPlotter(log_file)
-    plotter.run()
+    if len(sys.argv) > 1 and sys.argv[1] == '-p':
+        process_all_logs()
+    else:
+        log_file = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1].endswith('.log') else None
+        plotter = DynamometerPlotter(log_file)
+        plotter.run()
