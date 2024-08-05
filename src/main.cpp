@@ -421,15 +421,24 @@ void loop()
         }
         if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && triggerTime_us != 0 && loopStartTimer_us - triggerTime_us < 250000) {
             Serial.print((loopStartTimer_us - triggerTime_us) / 1000);
-            Serial.print(" ");
+            Serial.print(",");
             Serial.print(batteryVoltage_mv);
-            Serial.print(" ");
+            Serial.print(",");
             Serial.print(throttleValue[0]);
-            Serial.print(" ");
+            Serial.print(",");
+            Serial.print(throttleValue[1]);
+            Serial.print(",");
+            Serial.print(throttleValue[2]);
+            Serial.print(",");
+            Serial.print(throttleValue[3]);
+            Serial.print(",");
             Serial.print(motorRPM[0]);
-            Serial.print(" ");
+            Serial.print(",");
             Serial.print(motorRPM[1]);
-            Serial.print(" ");
+            Serial.print(",");
+            Serial.print(motorRPM[2]);
+            Serial.print(",");
+            Serial.print(motorRPM[3]);
             Serial.println();
         }
     }
