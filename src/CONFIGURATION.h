@@ -1,14 +1,15 @@
 #include "DShotRMT.h" // We need this for the dshot modes
 #include "boards_config.h" // board pinouts are in this file
 
-//Selector settings ON BOOT, locked after booting
-uint32_t revRPMset[3][4] = { { 50000, 50000, 50000, 50000 }, { 25000, 25000, 25000, 25000 },  { 14000, 14000, 14000, 14000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
+// Selector settings ON BOOT, locked after booting
+bool variableFPS = true;
+uint32_t revRPMset[3][4] = { { 40000, 40000, 30000, 30000 }, { 35000, 35000, 25000, 25000 }, { 14000, 14000, 14000, 14000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
 uint32_t idleRPMset[3][4] = { { 1500, 1500, 1500, 1500 }, { 1500, 1500, 1500, 1500 }, { 1500, 1500, 1500, 1500 } }; // adjust this to change idleRPM, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
-uint32_t idleTimeSet_ms[3] = { 5000, 5000, 5000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds, for firingMode 1, 2, 3
-uint32_t firingDelaySet_ms[3] = {150, 75, 50}; // delay to allow flywheels to spin up before firing dart for firingMode 1, 2, 3
+uint32_t idleTimeSet_ms[3] = { 30000, 0, 0 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds, for firingMode 1, 2, 3
+uint32_t firingDelaySet_ms[3] = { 75, 50, 50 }; // delay to allow flywheels to spin up before firing dart for firingMode 1, 2, 3
 
-//Live selector settings, change with switch
-uint32_t burstLengthSet[3] = { 300, 3, 1 };
+// Live selector settings, change with switch
+uint32_t burstLengthSet[3] = { 500, 2, 1 };
 uint32_t BufferModeSet[3] = { 0, 1, 1 };
 // 0 = stop firing when trigger is released
 // 1 = complete current burst when trigger is released
@@ -21,8 +22,11 @@ uint8_t defaultFiringMode = 1; // only for SWITCH_SELECT_FIRE, what mode to sele
 // Flywheel Settings
 uint32_t motorKv = 3200;
 dshot_mode_t dshotMode = DSHOT300; // Options are DSHOT150, DSHOT300, DSHOT600, or DSHOT_OFF. DSHOT300 is recommended, DSHOT150 does not work with either AM32 ESCs or closed loop control, and DSHOT600 seems less reliable. DSHOT_OFF falls back to servo PWM. PWM is not working, probably a ESP32 timer resource conflict with the pusher PWM circuit
-bidirectional_mode_e dshotBidirectional = NO_BIDIRECTION; // NO_BIDIRECTION or ENABLE_BIDIRECTION
+bidirectional_mode_e dshotBidirectional = ENABLE_BIDIRECTION; // NO_BIDIRECTION or ENABLE_BIDIRECTION
 bool brushedFlywheels = false; // solder a brushed motor flywheel cage to the ESC+ and Brushed Motor - pads
+//closed loop settings
+bool closedLoopFlywheels = true;
+bool timeOverride = false;
 
 // Dettlaff Settings
 char wifiSsid[32] = "network name";
