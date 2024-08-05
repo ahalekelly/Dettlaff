@@ -57,17 +57,21 @@ boards_t board = board_v0_9; // select the one that matches your board revision
 
 // Pusher Settings
 pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP; // either PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
-uint32_t pusherVoltage_mv = 14000; // if battery voltage is above this voltage, then use PWM to reduce the voltage that the pusher sees
-uint32_t pusherReverseBrakingVoltage_mv = 14000;
+uint32_t pusherVoltage_mv = 16000; // if battery voltage is above this voltage, then use PWM to reduce the voltage that the pusher sees
+bool pusherReverseDirection = false; // make motor spin backwards? v0.5 & v0.6 (hBridgeDriver) need this to be false or the pusher logic is inverted? and the v0.2 - v0.4 at8870 pusher seems to need this to be true for reverse polarity braking to work?
+
+// Solenoid Settings
 uint16_t solenoidExtendTime_ms = 20;
 uint16_t solenoidRetractTime_ms = 35;
-bool pusherReverseDirection = false; // make motor spin backwards? v0.5 & v0.6 (hBridgeDriver) need this to be false or the pusher logic is inverted? and the v0.2 - v0.4 at8870 pusher seems to need this to be true for reverse polarity braking to work?
-uint8_t pusherReversePolarityDuration_ms = 0; // try increasing this if your pusher doesn't stop at the right position because your pusher motor takes too long to stop. 10ms was good for my FDL with cheap pusher motor
-bool pusherReverseOnOverrun = false; // these two settings don't seem to work properly
-bool pusherEndReverseBrakingEarly = false;
+
+//Pusher Motor Settings
+uint32_t pusherReverseBrakingVoltage_mv = 16000;
+uint8_t pusherReversePolarityDuration_ms = 5; // try increasing this if your pusher doesn't stop at the right position because your pusher motor takes too long to stop. 10ms was good for my FDL with cheap pusher motor
+uint32_t pusherDwellTime_ms = 0; // dwell for this long at the end of each pusher cycle in full auto / burst mode to slow down rate of fire and allow mag to push the next dart. doesn't dwell if it's the last shot
+bool pusherBrakeOnDwell = false; // if true then the pusher brakes during its dwell time, if false it coasts
 
 // Advanced Settings
-uint16_t pusherStallTime_ms = 500; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?
+uint16_t pusherStallTime_ms = 750; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?
 uint8_t numMotors = 4; // leave at 4 until we have closed loop control
 bool revSwitchNormallyClosed = false; // invert switch signal?
 bool triggerSwitchNormallyClosed = false;
@@ -82,3 +86,5 @@ float maxDutyCycle_pct = 98;
 uint8_t deadtime = 10;
 uint16_t pwmFreq_hz = 20000;
 uint16_t servoFreq_hz = 200;
+bool pusherReverseOnOverrun = false; // don't use this, broken
+bool pusherEndReverseBrakingEarly = false; // don't use this, broken

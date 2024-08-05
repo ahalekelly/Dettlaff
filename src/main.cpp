@@ -33,6 +33,7 @@ int16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
 bool reverseBraking = false;
+bool pusherDwelling = false;
 bool closedLoopFlywheels = false;
 uint32_t batteryADC_mv = 0;
 uint32_t batteryVoltage_mv = 14800;
@@ -290,6 +291,18 @@ void loop()
                             firing = false;
                             flywheelState = STATE_IDLE; // check later
                         }
+                    } else if (pusherDwellTime_ms > 0) {
+                        if (pusherBrakeOnDwell) {
+                            pusher->brake();
+                        } else {
+                            pusher->coast();
+                        }
+                        pusherDwelling = true;
+                    }
+                } else if (pusherDwelling) {
+                    if (time_ms - pusherTimer_ms > pusherDwellTime_ms) { // if we've coasted the pusher for long enough
+                        pusher->drive(100.0 * pusherVoltage_mv / batteryVoltage_mv, pusherReverseDirection);
+                        pusherDwelling = false;
                     }
                 } else if (reverseBraking) { // if we're currently doing reverse braking
                     if (cycleSwitch.released() && pusherEndReverseBrakingEarly) {
