@@ -72,7 +72,7 @@ bool pusherEndReverseBrakingEarly = false;
 
 // Advanced Settings
 uint16_t pusherStallTime_ms = 500; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?
-uint8_t numMotors = 4; // leave at 4 until we have closed loop control
+const bool motors[4] = {false, false, true, true}; // which motors are hooked up
 bool revSwitchNormallyClosed = false; // invert switch signal?
 bool triggerSwitchNormallyClosed = false;
 bool cycleSwitchNormallyClosed = false;
