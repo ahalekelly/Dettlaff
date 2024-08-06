@@ -26,7 +26,7 @@ bidirectional_mode_e dshotBidirectional = ENABLE_BIDIRECTION; // NO_BIDIRECTION 
 bool brushedFlywheels = false; // solder a brushed motor flywheel cage to the ESC+ and Brushed Motor - pads
 //closed loop settings
 bool closedLoopFlywheels = true;
-bool timeOverride = false;
+bool timeOverride = true;
 
 // Dettlaff Settings
 char wifiSsid[32] = "network name";
