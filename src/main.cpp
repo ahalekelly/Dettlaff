@@ -37,6 +37,7 @@ uint32_t batteryADC_mv = 0;
 uint32_t batteryVoltage_mv = 14800;
 uint32_t pusherShunt_mv = 0;
 uint32_t pusherCurrent_ma = 0;
+uint32_t pusherCurrentSmoothed_ma = 0;
 const uint32_t maxThrottle = 1999;
 uint32_t motorRPM[4] = { 0, 0, 0, 0 };
 Driver* pusher;
@@ -46,7 +47,7 @@ int8_t telemMotorNum = -1; // 0-3
 uint32_t triggerTime_us = 0;
 uint32_t tempRPM;
 ESP32AnalogRead batteryADC;
-// ESP32AnalogRead pusherShuntADC;
+ESP32AnalogRead pusherShuntADC;
 
 // closed loop variables
 int32_t PIDError[4];
@@ -190,7 +191,7 @@ void setup()
     }
 
     batteryADC.attach(board.batteryADC);
-    // pusherShuntADC.attach(board.pusherShunt);
+    pusherShuntADC.attach(board.pusherShunt);
     /**
     if (wifiDuration_ms > 0) {
         WiFiInit();
@@ -357,8 +358,9 @@ void loop()
 
     // Serial.println(batteryVoltage_mv);
 
-    // pusherShunt_mv = pusherShuntADC.readMiliVolts();
-    // pusherCurrent_ma = (pusherShunt_mv * 3070 / 1000 * (100 - pusherCurrentSmoothingFactor) + pusherCurrent_ma * pusherCurrentSmoothingFactor) / 100;
+    pusherShunt_mv = pusherShuntADC.readMiliVolts();
+    pusherCurrent_ma = pusherShunt_mv * 3070 / 1000;
+    pusherCurrentSmoothed_ma = (pusherCurrent_ma * (100 - pusherCurrentSmoothingFactor) + pusherCurrentSmoothed_ma * pusherCurrentSmoothingFactor) / 100;
 
     // Serial.println(pusherCurrent_ma);
 
@@ -436,10 +438,14 @@ void loop()
                 }
             }
         }
+
+        // Telemetry logging for use with dyno-graph python script
         if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && triggerTime_us != 0 && loopStartTimer_us - triggerTime_us < 250000) {
             Serial.print((loopStartTimer_us - triggerTime_us) / 1000);
             Serial.print(",");
             Serial.print(batteryVoltage_mv);
+            Serial.print(",");
+            Serial.print(pusherCurrent_ma);
             for (int i = 0; i < 4; i++) {
                 if (motors[i]) {
                     Serial.print(",");
