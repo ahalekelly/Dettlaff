@@ -29,7 +29,9 @@ char wifiSsid[32] = "network name";
 char wifiPass[63] = "password";
 uint32_t wifiDuration_ms = 10 * 60 * 1000; // how long before wifi turns off to save power. default is 10 min
 uint32_t printTelemetry = false; // output telemetry over USB serial port for tuning
-uint32_t lowVoltageCutoff_mv = 0; // esp32 voltage measurements are not very accurate
+uint32_t lowVoltageCutoff_mv = 2500 * 4; // default is 2.5V per cell * 4 cells because the ESP32 voltage measurement is not very accurate
+// to protect your batteries, i reccomend doing the calibration below and then setting the cutoff to 3.2V to 3.4V per cell
+float voltageCalibrationFactor = 1.0; // measure the battery voltage with a multimeter and divide that by the "Battery voltage before calibration" printed in the Serial Monitor, then put the result here
 
 // Input Pins, set to 0 if not using
 uint8_t triggerSwitchPin = 32; // main trigger pin

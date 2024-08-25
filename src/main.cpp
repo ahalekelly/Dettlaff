@@ -77,13 +77,12 @@ void setup()
 
     batteryADC.attach(board.batteryADC);
     batteryADC_mv = batteryADC.readMiliVolts();
-    batteryVoltage_mv = (batteryADC_mv * 11 * (100 - voltageSmoothingFactor) + batteryVoltage_mv * voltageSmoothingFactor) / 100; // apply exponential moving average to smooth out noise
-
-    if (batteryVoltage_mv < lowVoltageCutoff_mv) {
-        Serial.print("Battery low, shutting down! ");
-        Serial.print(batteryVoltage_mv);
-        Serial.println("mv");
-        esp_deep_sleep_start(); // go to sleep and never wake up
+    batteryVoltage_mv = voltageCalibrationFactor * batteryADC_mv * 11;
+    Serial.print("Battery voltage (before calibration): ");
+    Serial.print(batteryADC_mv * 11);
+    if (voltageCalibrationFactor != 1.0) {
+        Serial.print("Battery voltage (after calibration): ");
+        Serial.print(voltageCalibrationFactor * batteryADC_mv * 11);
     }
 
     switch (board.pusherDriverType) {
@@ -234,14 +233,15 @@ void loop()
     switch (flywheelState) {
 
     case STATE_IDLE:
+        if (batteryVoltage_mv < lowVoltageCutoff_mv && throttleValue[0] == 0 && loopStartTimer_us > 2000000) {
+            digitalWrite(board.flywheel, LOW); // cut power to ESCs and pusher
+            Serial.print("Battery low, shutting down! ");
+            Serial.print(batteryVoltage_mv);
+            Serial.println("mv");
+            esp_deep_sleep_start(); // go to sleep and never wake up
+        }
+
         if (triggerSwitch.pressed() || revSwitch.isPressed()) {
-            if (throttleValue[0] == 0 && batteryVoltage_mv < lowVoltageCutoff_mv) {
-                digitalWrite(board.flywheel, LOW); // cut power to ESCs and pusher
-                Serial.print("Battery low, shutting down! ");
-                Serial.print(batteryVoltage_mv);
-                Serial.println("mv");
-                esp_deep_sleep_start(); // go to sleep and never wake up
-            }
             triggerTime_us = loopStartTimer_us;
             targetRPM = &revRPM;
             lastRevTime_ms = time_ms;
@@ -356,7 +356,7 @@ void loop()
         break;
     }
     batteryADC_mv = batteryADC.readMiliVolts();
-    batteryVoltage_mv = (batteryADC_mv * 11 * (100 - voltageSmoothingFactor) + batteryVoltage_mv * voltageSmoothingFactor) / 100; // apply exponential moving average to smooth out noise
+    batteryVoltage_mv = voltageCalibrationFactor * (batteryADC_mv * 11 * (100 - voltageSmoothingFactor) + batteryVoltage_mv * voltageSmoothingFactor) / 100; // apply exponential moving average to smooth out noise
 
     // Serial.println(batteryVoltage_mv);
 
