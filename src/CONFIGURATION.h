@@ -4,9 +4,9 @@
 // Selector settings ON BOOT, locked after booting
 bool variableFPS = true;
 int32_t revRPMset[3][4] = { { 40000, 40000, 30000, 30000 }, { 35000, 35000, 25000, 25000 }, { 14000, 14000, 14000, 14000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
-int32_t idleRPMset[3][4] = { { 1500, 1500, 1500, 1500 }, { 1500, 1500, 1500, 1500 }, { 1500, 1500, 1500, 1500 } }; // adjust this to change idleRPM, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
-uint32_t idleTimeSet_ms[3] = { 30000, 0, 0 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds, for firingMode 1, 2, 3
-uint32_t firingDelaySet_ms[3] = { 75, 50, 50 }; // delay to allow flywheels to spin up before firing dart for firingMode 1, 2, 3
+int32_t idleRPMset[3][4] = { { 1000, 1000, 1000, 1000 }, { 1000, 1000, 1000, 1000 }, { 1000, 1000, 1000, 1000 } }; // adjust this to change idleRPM, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
+uint32_t idleTimeSet_ms[3] = { 30000, 30000, 30000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds, for firingMode 1, 2, 3
+uint32_t firingDelaySet_ms[3] = { 500, 500, 500 }; // delay to allow flywheels to spin up before firing dart for firingMode 1, 2, 3
 
 // Live selector settings, change with switch
 uint32_t burstLengthSet[3] = { 500, 2, 1 };
@@ -23,14 +23,14 @@ uint8_t defaultFiringMode = 1; // only for SWITCH_SELECT_FIRE, what mode to sele
 // Flywheel Settings
 int32_t motorKv = 3200;
 dshot_mode_t dshotMode = DSHOT300; // Options are DSHOT150, DSHOT300, DSHOT600, or DSHOT_OFF. DSHOT300 is recommended, DSHOT150 does not work with either AM32 ESCs or closed loop control, and DSHOT600 seems less reliable. DSHOT_OFF falls back to servo PWM. PWM is not working, probably a ESP32 timer resource conflict with the pusher PWM circuit
-bidirectional_mode_e dshotBidirectional = NO_BIDIRECTION; // NO_BIDIRECTION or ENABLE_BIDIRECTION
 bool brushedFlywheels = false; // solder a brushed motor flywheel cage to the ESC+ and Brushed Motor - pads
 
 // Closed Loop Settings
-bool closedLoopFlywheels = false; // bidirectional dshot above is required to do closed loop
+flywheelControlType_t flywheelControl = TWO_LEVEL_CONTROL; //     OPEN_LOOP_CONTROL, TWO_LEVEL_CONTROL, or PID_CONTROL
 bool timeOverride = true;
-int32_t firingRPMTolerance = 10000; // fire pusher when all flywheels are within this amount of target rpm
-// higher values will mean less pusher delay but potentially 
+int32_t fullThrottleRpmTolerance = 2000; // if rpm is more than this amount below target rpm, send full throttle
+int32_t fullThrottleRpmMinThreshold = 10000; // always full throttle below this rpm, overrides above
+int32_t firingRPMTolerance = 10000; // fire pusher when all flywheels are within this amount of target rpm. higher values will mean less pusher delay but potentially fire too early
 
 float KP = 1.5;
 float KI = 0.0;
@@ -91,7 +91,7 @@ bool revSwitchNormallyClosed = false; // invert switch signal?
 bool triggerSwitchNormallyClosed = false;
 bool cycleSwitchNormallyClosed = false;
 uint16_t debounceTime_ms = 25;
-uint32_t voltageSmoothingFactor = 90; // from 0 to 99, how much averaging to apply to the battery voltage reading (exponential moving average)
+uint32_t voltageSmoothingFactor = 50; // from 0 to 99, how much averaging to apply to the battery voltage reading (exponential moving average)
 uint32_t pusherCurrentSmoothingFactor = 90;
 char AP_SSID[32] = "Dettlaff";
 char AP_PW[32] = "KellyIndu";

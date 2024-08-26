@@ -28,6 +28,7 @@ int32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
 uint16_t burstLength; // stores value from burstLengthSet for current firing mode
 uint8_t bufferMode; // stores value from bufferModeSet for current firing mode
 int8_t firingMode = 0; // stores value from firingModeSet for current firing mode
+bidirectional_mode_e dshotBidirectional = NO_BIDIRECTION;
 int32_t dshotValue = 0;
 int16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
@@ -36,11 +37,15 @@ bool reverseBraking = false;
 bool pusherDwelling = false;
 uint32_t batteryADC_mv = 0;
 int32_t batteryVoltage_mv = 14800;
+const int voltageAveragingWindow = 5;
+int32_t voltageBuffer[voltageAveragingWindow] = { 0 };
+int voltageBufferIndex = 0;
 int32_t pusherShunt_mv = 0;
 int32_t pusherCurrent_ma = 0;
 int32_t pusherCurrentSmoothed_ma = 0;
 const int32_t maxThrottle = 1999;
 int32_t motorRPM[4] = { 0, 0, 0, 0 };
+int32_t fullThrottleRpmThreshold[4] = { fullThrottleRpmMinThreshold, fullThrottleRpmMinThreshold, fullThrottleRpmMinThreshold, fullThrottleRpmMinThreshold };
 Driver* pusher;
 bool wifiState = false;
 // String telemBuffer = "";
@@ -86,15 +91,14 @@ void setup()
     batteryADC_mv = batteryADC.readMiliVolts();
     batteryVoltage_mv = voltageCalibrationFactor * batteryADC_mv * 11;
     Serial.print("Battery voltage (before calibration): ");
-    Serial.print(batteryADC_mv * 11);
+    Serial.print(batteryVoltage_mv);
     if (voltageCalibrationFactor != 1.0) {
         Serial.print("Battery voltage (after calibration): ");
         Serial.print(voltageCalibrationFactor * batteryADC_mv * 11);
     }
 
-    if (dshotBidirectional == NO_BIDIRECTION && closedLoopFlywheels == true) {
-        Serial.println("You must turn on bidirectional dshot to have closed loop!");
-        closedLoopFlywheels = false;
+    if (flywheelControl != OPEN_LOOP_CONTROL) {
+        dshotBidirectional = ENABLE_BIDIRECTION;
     }
 
     switch (board.pusherDriverType) {
@@ -275,7 +279,7 @@ void loop()
         break;
 
     case STATE_ACCELERATING:
-        if (closedLoopFlywheels) {
+        if (flywheelControl != OPEN_LOOP_CONTROL) {
             // If ALL motors are at target RPM update the blaster's state to FULLSPEED.
             // clang-format off
             if ((!motors[0] || motorRPM[0] > firingRPM[0]) &&
@@ -283,12 +287,11 @@ void loop()
                 (!motors[2] || motorRPM[2] > firingRPM[2]) &&
                 (!motors[3] || motorRPM[3] > firingRPM[3])
             ) {
-                // clang-format on
-                Serial.print(time_ms - triggerTime_us / 1000);
                 flywheelState = STATE_FULLSPEED;
             }
+            // clang-format on
         }
-        if ((!closedLoopFlywheels || timeOverride) && time_ms > lastRevTime_ms + firingDelay_ms) {
+        if ((flywheelControl == OPEN_LOOP_CONTROL || timeOverride) && time_ms > lastRevTime_ms + firingDelay_ms) {
             flywheelState = STATE_FULLSPEED;
         }
         break;
@@ -296,6 +299,7 @@ void loop()
     case STATE_FULLSPEED:
         if (!revSwitch.isPressed() && shotsToFire == 0 && !firing) {
             flywheelState = STATE_IDLE;
+            Serial.println("state transition: FULLSPEED to IDLE 1");
         } else if (shotsToFire > 0 || firing) {
             switch (pusherType) {
 
@@ -317,6 +321,7 @@ void loop()
                             pusher->brake();
                             firing = false;
                             flywheelState = STATE_IDLE; // check later
+                            Serial.println("state transition: FULLSPEED to IDLE 2");
                         }
                     } else if (pusherDwellTime_ms > 0) {
                         if (pusherBrakeOnDwell) {
@@ -338,18 +343,21 @@ void loop()
                         reverseBraking = false;
                         firing = false;
                         flywheelState = STATE_IDLE; // check later
+                        Serial.println("state transition: FULLSPEED to IDLE 3");
                     } else if (cycleSwitch.pressed()) {
                         Serial.println("Cycle switch pressed during reverse braking");
                         pusher->brake();
                         reverseBraking = false;
                         firing = false;
                         flywheelState = STATE_IDLE; // check later
+                        Serial.println("state transition: FULLSPEED to IDLE 4");
                     } else if (time_ms > pusherTimer_ms + pusherReversePolarityDuration_ms) {
                         Serial.println("pusherReverse end of duration");
                         pusher->brake();
                         reverseBraking = false;
                         firing = false;
                         flywheelState = STATE_IDLE; // check later
+                        Serial.println("state transition: FULLSPEED to IDLE 5");
                     }
                 } else if (!firing && cycleSwitch.released() && pusherReverseOnOverrun) {
                     Serial.println("pusherReverseOnOverrun");
@@ -385,13 +393,20 @@ void loop()
         break;
     }
     batteryADC_mv = batteryADC.readMiliVolts();
-    batteryVoltage_mv = voltageCalibrationFactor * (batteryADC_mv * 11 * (100 - voltageSmoothingFactor) + batteryVoltage_mv * voltageSmoothingFactor) / 100; // apply exponential moving average to smooth out noise
+    voltageBuffer[voltageBufferIndex] = voltageCalibrationFactor * batteryADC_mv * 11;
+    voltageBufferIndex = (voltageBufferIndex + 1) % voltageAveragingWindow;
+    batteryVoltage_mv = 0;
+    for (int i = 0; i < voltageAveragingWindow; i++) {
+        batteryVoltage_mv += voltageBuffer[i];
+    }
+    batteryVoltage_mv /= voltageAveragingWindow; // apply exponential moving average to smooth out noise. Time constant ≈ 1.44 ms
 
     pusherShunt_mv = pusherShuntADC.readMiliVolts();
     pusherCurrent_ma = pusherShunt_mv * 3070 / 1000;
     pusherCurrentSmoothed_ma = (pusherCurrent_ma * (100 - pusherCurrentSmoothingFactor) + pusherCurrentSmoothed_ma * pusherCurrentSmoothingFactor) / 100;
 
-    if (closedLoopFlywheels) { // PID Control
+    switch (flywheelControl) {
+    case PID_CONTROL:
         for (int i = 0; i < 4; i++) {
             if (motors[i]) {
                 PIDError[i] = (*targetRPM)[i] - motorRPM[i];
@@ -410,7 +425,25 @@ void loop()
                 PIDIntegral += PIDIntegral + PIDError[i] * loopTime_us / 1000000;
             }
         }
-    } else { // open loop case
+        break;
+
+    case TWO_LEVEL_CONTROL:
+        for (int i = 0; i < 4; i++) {
+            if (motors[i]) {
+                fullThrottleRpmThreshold[i] = max((*targetRPM)[i] - fullThrottleRpmTolerance, fullThrottleRpmMinThreshold);
+                if (targetRPM == &revRPM && motorRPM[i] < fullThrottleRpmThreshold[i]) {
+                    throttleValue[i] = maxThrottle;
+                } else if (throttleValue[i] == 0 || targetRPM == &revRPM) {
+                    throttleValue[i] = min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv);
+                } else {
+                    throttleValue[i] = max(min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv),
+                        throttleValue[i] - 1);
+                }
+            }
+        }
+        break;
+
+    case OPEN_LOOP_CONTROL:
         for (int i = 0; i < 4; i++) {
             if (motors[i]) {
                 if (throttleValue[i] == 0) {
@@ -421,6 +454,7 @@ void loop()
                 }
             }
         }
+        break;
     }
 
     // send signal to ESCs
@@ -469,7 +503,7 @@ void loop()
         if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && triggerTime_us != 0 && loopStartTimer_us - triggerTime_us < 250000) {
             Serial.print((loopStartTimer_us - triggerTime_us) / 1000);
             Serial.print(",");
-            Serial.print(batteryVoltage_mv);
+            Serial.print(batteryADC_mv * 11);
             Serial.print(",");
             Serial.print(pusherCurrent_ma);
             for (int i = 0; i < 4; i++) {

@@ -27,6 +27,12 @@ enum selectFireType_t {
     BUTTON_SELECT_FIRE
 };
 
+enum flywheelControlType_t {
+    OPEN_LOOP_CONTROL,
+    TWO_LEVEL_CONTROL,
+    PID_CONTROL
+};
+
 typedef struct {
     pusherDriverType_t pusherDriverType;
     bool pusherCoastHigh;

@@ -4,6 +4,7 @@ import serial
 import serial.tools.list_ports
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from matplotlib.ticker import AutoMinorLocator
 import datetime
 import csv
 import glob
@@ -43,6 +44,7 @@ class DynamometerPlotter:
         self.lines = []
         self.data = deque(maxlen=MAX_DATA_POINTS)
         self.new_run = True
+        self.mask_starts = []  # Initialize mask_starts here
         self.data_lock = Lock()
         self.min_max_text = None
         self.start_time = None
@@ -54,7 +56,7 @@ class DynamometerPlotter:
         self.max_rpms = [float('-inf')] * self.num_motors
         self.max_rpm_overall = 0  # Track the overall maximum RPM
         self.line_width = LINE_WIDTH  # Add this line
-        self.mask_starts = []  # Initialize mask_starts here
+        self.mask_starts = []  # Initialize mask_starts here  # Initialize mask_starts here
 
         if log_file:
             print(f"Reading from log file: {log_file}")
@@ -86,12 +88,17 @@ class DynamometerPlotter:
 
     def read_from_log(self):
         max_timestamp = 0  # Initialize max_timestamp
+        prev_timestamp = None
         with open(self.log_file, 'r') as f:
             for row in csv.reader(f):
                 if row and not any(c.isalpha() for c in ''.join(row)):
                     if len(row) == self.expected_values and all(self.is_number(x) for x in row):
+                        timestamp = int(row[0])
+                        if prev_timestamp is not None and timestamp < prev_timestamp:
+                            self.mask_starts.append(len(self.data))  # Add this line to detect new runs
                         self.process_data(row)
-                        max_timestamp = max(max_timestamp, int(row[0]))  # Update max_timestamp as int
+                        max_timestamp = max(max_timestamp, timestamp)
+                        prev_timestamp = timestamp
         print(f"Finished reading log file. Total data points: {len(self.data)}")
         print(f"Max timestamp value: {max_timestamp}")
         if max_timestamp > 10000:
@@ -140,6 +147,8 @@ class DynamometerPlotter:
 
         if len(self.data) > 1 and self.data[-1][0] < self.data[-2][0]:
             print("New run detected")
+            self.mask_starts.append(len(self.data))  # Add this line to store the index of the new run start
+            self.mask_starts.append(len(self.data))  # Add this line to store the index of the new run start  # Add this line to store the index of the new run start
             self.new_run = True
             self.start_time = time_ms
             self.start_voltage = voltage
@@ -196,6 +205,19 @@ class DynamometerPlotter:
                 throttles = [ma.array(t) for t in throttles]
                 rpms = [ma.array(r) for r in rpms]
                 for start in self.mask_starts:
+                    # Expand mask by 1 in each direction
+                    mask_start = max(0, start - 1)
+                    mask_end = min(len(voltage), start + 2)
+                    voltage[mask_start:mask_end] = ma.masked
+                    pusher_current[mask_start:mask_end] = ma.masked
+                    for t in throttles:
+                        t[mask_start:mask_end] = ma.masked
+                    for r in rpms:
+                        r[mask_start:mask_end] = ma.masked
+                pusher_current = ma.array(pusher_current)
+                throttles = [ma.array(t) for t in throttles]
+                rpms = [ma.array(r) for r in rpms]
+                for start in self.mask_starts:
                     voltage[start] = ma.masked
                     pusher_current[start] = ma.masked
                     for t in throttles:
@@ -235,6 +257,7 @@ class DynamometerPlotter:
                 ax.autoscale_view()
                 ax.set_ylim(bottom=0)
                 ax.grid(True, which='both', linestyle='--', alpha=0.7)
+                ax.yaxis.set_minor_locator(AutoMinorLocator(2))  # Add minor ticks
 
             self.ax1.set_ylabel('Throttle Value')
             self.ax1.set_ylim(0, 2050)
