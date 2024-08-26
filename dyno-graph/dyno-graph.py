@@ -31,10 +31,9 @@ def get_highest_port():
     return max(ports, key=lambda x: int(''.join(filter(str.isdigit, x))) if any(c.isdigit() for c in x) else 0)
 
 class DynamometerPlotter:
-    def __init__(self, log_file=None, batch_mode=False, print_data=False):
+    def __init__(self, log_file=None, print_data=False):
         self.print_data = print_data
         self.log_file = log_file
-        self.batch_mode = batch_mode
         self.num_motors = self.determine_num_motors()
         self.expected_values = 3 + 2 * self.num_motors  # time, voltage, current, and (throttle, rpm) for each motor
 
@@ -42,7 +41,6 @@ class DynamometerPlotter:
         self.fig, (self.ax1, self.ax2, self.ax3, self.ax4) = plt.subplots(4, 1, figsize=(1200*px, 800*px), sharex=True)
         self.lines = []
         self.data = deque(maxlen=MAX_DATA_POINTS)
-        self.last_update = time.time()
         self.new_run = True
         self.data_lock = Lock()
         self.min_max_text = None
@@ -275,9 +273,8 @@ def process_all_logs():
     log_files = glob.glob('*.log')
     for log_file in log_files:
         print(f"Processing {log_file}")
-        plotter = DynamometerPlotter(log_file, batch_mode=True)
+        plotter = DynamometerPlotter(log_file)
         plotter.update_plot(0)  # Generate the plot
-        plotter.save_plot_as_png()  # Save the plot as PNG
         plt.close(plotter.fig)  # Close the figure to free up memory
     print("Finished processing all log files")
 
