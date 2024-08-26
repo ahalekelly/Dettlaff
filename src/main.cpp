@@ -45,7 +45,7 @@ int32_t pusherCurrent_ma = 0;
 int32_t pusherCurrentSmoothed_ma = 0;
 const int32_t maxThrottle = 1999;
 int32_t motorRPM[4] = { 0, 0, 0, 0 };
-int32_t fullThrottleRpmThreshold[4] = { fullThrottleRpmMinThreshold, fullThrottleRpmMinThreshold, fullThrottleRpmMinThreshold, fullThrottleRpmMinThreshold };
+int32_t fullThrottleRpmThreshold[4] = { 0, 0, 0, 0 };
 Driver* pusher;
 bool wifiState = false;
 // String telemBuffer = "";
@@ -178,6 +178,7 @@ void setup()
             revRPM[i] = revRPMset[firingMode][i];
             idleRPM[i] = idleRPMset[firingMode][i];
             firingRPM[i] = revRPM[i] - 10000;
+            fullThrottleRpmThreshold[i] = revRPM[i] - fullThrottleRpmTolerance;
         }
     }
     idleTime_ms = idleTimeSet_ms[firingMode];
@@ -430,7 +431,6 @@ void loop()
     case TWO_LEVEL_CONTROL:
         for (int i = 0; i < 4; i++) {
             if (motors[i]) {
-                fullThrottleRpmThreshold[i] = max((*targetRPM)[i] - fullThrottleRpmTolerance, fullThrottleRpmMinThreshold);
                 if (targetRPM == &revRPM && motorRPM[i] < fullThrottleRpmThreshold[i]) {
                     throttleValue[i] = maxThrottle;
                 } else if (throttleValue[i] == 0 || targetRPM == &revRPM) {

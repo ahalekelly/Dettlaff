@@ -29,7 +29,6 @@ bool brushedFlywheels = false; // solder a brushed motor flywheel cage to the ES
 flywheelControlType_t flywheelControl = TWO_LEVEL_CONTROL; //     OPEN_LOOP_CONTROL, TWO_LEVEL_CONTROL, or PID_CONTROL
 bool timeOverride = true;
 int32_t fullThrottleRpmTolerance = 2000; // if rpm is more than this amount below target rpm, send full throttle
-int32_t fullThrottleRpmMinThreshold = 10000; // always full throttle below this rpm, overrides above
 int32_t firingRPMTolerance = 10000; // fire pusher when all flywheels are within this amount of target rpm. higher values will mean less pusher delay but potentially fire too early
 
 float KP = 1.5;
