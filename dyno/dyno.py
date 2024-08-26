@@ -1,22 +1,21 @@
+import os
 import argparse
 import serial
 import serial.tools.list_ports
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import datetime
-import time
 import csv
-import sys
-import os
 import glob
 import platform
 from collections import deque
 from threading import Thread, Lock
-import numpy as np
 import numpy.ma as ma
 
 # Configuration variables
 BAUD_RATE = 460800
+LINE_WIDTH = 0.8  # Line width for individual plots
+COMBINED_LINE_WIDTH = 0.4  # Line width for combined plot
 MAX_DATA_POINTS = 10000
 
 def get_highest_port():
@@ -54,6 +53,7 @@ class DynamometerPlotter:
         self.max_throttles = [float('-inf')] * self.num_motors
         self.max_rpms = [float('-inf')] * self.num_motors
         self.max_rpm_overall = 0  # Track the overall maximum RPM
+        self.line_width = LINE_WIDTH  # Add this line
         self.mask_starts = []  # Initialize mask_starts here
 
         if log_file:
@@ -71,7 +71,7 @@ class DynamometerPlotter:
             self.running = True
             self.data_thread = Thread(target=self.read_serial_data)
             self.data_thread.start()
-        self.mask_starts = []  # Add this line
+        self.mask_starts = []
 
     def determine_num_motors(self):
         if self.log_file:
@@ -93,7 +93,10 @@ class DynamometerPlotter:
                         self.process_data(row)
                         max_timestamp = max(max_timestamp, int(row[0]))  # Update max_timestamp as int
         print(f"Finished reading log file. Total data points: {len(self.data)}")
-        print(f"Max timestamp value: {max_timestamp}")  # Print max_timestamp
+        print(f"Max timestamp value: {max_timestamp}")
+        if max_timestamp > 10000:
+            print("Timestamp is too large")
+            os._exit(0)  # Exit the script immediately
         self.update_plot(0)  # Ensure the plot is updated after reading the log file
 
     def is_number(self, s):
@@ -200,12 +203,26 @@ class DynamometerPlotter:
                     for r in rpms:
                         r[start] = ma.masked
 
+            # Apply masks if mask_starts is not empty
+            if self.mask_starts:
+                voltage = ma.array(voltage)
+                pusher_current = ma.array(pusher_current)
+                throttles = [ma.array(t) for t in throttles]
+                rpms = [ma.array(r) for r in rpms]
+                for start in self.mask_starts:
+                    voltage[start] = ma.masked
+                    pusher_current[start] = ma.masked
+                    for t in throttles:
+                        t[start] = ma.masked
+                    for r in rpms:
+                        r[start] = ma.masked
+
             if not self.lines:
                 for i in range(len(throttles)):
-                    self.lines.append(self.ax1.plot(x, throttles[i], label=f'Throttle {i+1}')[0])
-                    self.lines.append(self.ax2.plot(x, rpms[i], label=f'RPM {i+1}')[0])
-                self.lines.append(self.ax3.plot(x, voltage, label='Battery Voltage')[0])
-                self.lines.append(self.ax4.plot(x, pusher_current, label='Pusher Current')[0])
+                    self.lines.append(self.ax1.plot(x, throttles[i], label=f'Throttle {i+1}', linewidth=self.line_width)[0])
+                    self.lines.append(self.ax2.plot(x, rpms[i], label=f'RPM {i+1}', linewidth=self.line_width)[0])
+                self.lines.append(self.ax3.plot(x, voltage, label='Battery Voltage', linewidth=self.line_width)[0])
+                self.lines.append(self.ax4.plot(x, pusher_current, label='Pusher Current', linewidth=self.line_width)[0])
             else:
                 for i in range(len(throttles)):
                     self.lines[i*2].set_data(x, throttles[i])
@@ -220,12 +237,13 @@ class DynamometerPlotter:
                 ax.grid(True, which='both', linestyle='--', alpha=0.7)
 
             self.ax1.set_ylabel('Throttle Value')
-            self.ax1.set_ylim(0, 2050)  # Increased to 2050
+            self.ax1.set_ylim(0, 2050)
             
             # Set RPM y-axis limit with some headroom
             rpm_limit = max(1000, int(self.max_rpm_overall * 1.1))  # At least 1000, or 10% above max observed RPM
             self.ax2.set_ylim(0, rpm_limit)
             self.ax2.set_ylabel('RPM')
+
 
             self.ax3.set_ylabel('Battery Voltage (V)')
             self.ax3.set_ylim(bottom=0)  # Set the bottom limit to 0
@@ -251,7 +269,14 @@ class DynamometerPlotter:
             if self.start_voltage is not None and self.min_voltage is not None and self.end_voltage is not None:
                 voltage_text = f"Voltage: Start {self.start_voltage:.2f}V, Min {self.min_voltage:.2f}V, End {self.end_voltage:.2f}V\n"
             
+            
+            # Check if voltage values are available before formatting
+            voltage_text = ""
+            if self.start_voltage is not None and self.min_voltage is not None and self.end_voltage is not None:
+                voltage_text = f"Voltage: Start {self.start_voltage:.2f}V, Min {self.min_voltage:.2f}V, End {self.end_voltage:.2f}V\n"
+            
             self.min_max_text = self.fig.text(0.02, 0.98, 
+                voltage_text +
                 voltage_text +
                 f"Min Throttle: " + ", ".join(f"{t:.0f}" for t in self.min_throttles) + "\n"
                 f"Max Throttle: " + ", ".join(f"{t:.0f}" for t in self.max_throttles) + "\n"
@@ -296,6 +321,18 @@ def process_all_logs():
     start_voltages = []
     end_voltages = []
 
+    combined_data = []
+    mask_starts = []
+    total_points = 0
+    max_rpm_overall = 0
+    min_voltage_overall = float('inf')
+    max_voltage_overall = float('-inf')
+    min_throttles_overall = None
+    max_throttles_overall = None
+    max_rpms_overall = None
+    start_voltages = []
+    end_voltages = []
+
     for log_file in log_files:
         print(f"Processing {log_file}")
         plotter = DynamometerPlotter(log_file)
@@ -320,6 +357,7 @@ def process_all_logs():
                 max_rpms_overall = [max(a, b) for a, b in zip(max_rpms_overall, plotter.max_rpms)]
 
     combined_plotter = DynamometerPlotter(None)
+    combined_plotter.line_width = COMBINED_LINE_WIDTH  # Add this line
     combined_plotter.data = combined_data
     combined_plotter.mask_starts = mask_starts[1:]
     combined_plotter.png_file = 'combined_plot.png'
@@ -330,11 +368,12 @@ def process_all_logs():
     combined_plotter.min_throttles = min_throttles_overall
     combined_plotter.max_throttles = max_throttles_overall
     combined_plotter.max_rpms = max_rpms_overall
+    combined_plotter.line_width = COMBINED_LINE_WIDTH  # Add this line
     combined_plotter.update_plot(0)
-    plt.show()  # Add this line to open the plot window
     plt.close(combined_plotter.fig)
-
+    # plt.show();
     print("Finished processing all log files")
+
 
 
 if __name__ == "__main__":
@@ -346,6 +385,9 @@ if __name__ == "__main__":
 
     if args.all:
         process_all_logs()
+        os._exit(0)  #  sys.exit(0) doesn't work here for some reason
     else:
         plotter = DynamometerPlotter(args.log_file, print_data=args.print)
         plotter.run()
+
+    print("Script reached end")
