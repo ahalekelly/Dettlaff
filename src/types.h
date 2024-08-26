@@ -30,20 +30,20 @@ enum selectFireType_t {
 typedef struct {
     pusherDriverType_t pusherDriverType;
     bool pusherCoastHigh;
-    int8_t nSleep;
-    int8_t flywheel;
-    int8_t pusher1L;
-    int8_t pusher2L;
-    int8_t pusher1H;
-    int8_t pusher2H;
-    int8_t esc1;
-    int8_t esc2;
-    int8_t esc3;
-    int8_t esc4;
-    int8_t telem;
-    int8_t button;
-    int8_t batteryADC;
-    int8_t pusherShunt;
+    uint8_t nSleep;
+    uint8_t flywheel;
+    uint8_t pusher1L;
+    uint8_t pusher2L;
+    uint8_t pusher1H;
+    uint8_t pusher2H;
+    uint8_t esc1;
+    uint8_t esc2;
+    uint8_t esc3;
+    uint8_t esc4;
+    uint8_t telem;
+    uint8_t button;
+    uint8_t batteryADC;
+    uint8_t pusherShunt;
 } boards_t;
 
 #endif

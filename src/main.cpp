@@ -34,7 +34,7 @@ flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
 bool reverseBraking = false;
 bool pusherDwelling = false;
-int32_t batteryADC_mv = 0;
+uint32_t batteryADC_mv = 0;
 int32_t batteryVoltage_mv = 14800;
 int32_t pusherShunt_mv = 0;
 int32_t pusherCurrent_ma = 0;
@@ -372,6 +372,8 @@ void loop()
                     pusherTimer_ms = time_ms;
                     Serial.println("solenoid retracting");
                 }
+                break;
+            case NO_PUSHER:
                 break;
             }
         }
