@@ -22,4 +22,4 @@ To regenerate the plot for an existing log file:
     venv/bin/python dyno-graph.py 2024-08-25_21:30:04.log
 
 To regenerate the plots for all log files:
-    venv/bin/python dyno-graph.py all
+    venv/bin/python dyno-graph.py -a

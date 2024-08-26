@@ -1,3 +1,4 @@
+import argparse
 import serial
 import serial.tools.list_ports
 import matplotlib.pyplot as plt
@@ -30,17 +31,15 @@ def get_highest_port():
     return max(ports, key=lambda x: int(''.join(filter(str.isdigit, x))) if any(c.isdigit() for c in x) else 0)
 
 class DynamometerPlotter:
-    def __init__(self, log_file=None, batch_mode=False):
+    def __init__(self, log_file=None, batch_mode=False, print_data=False):
+        self.print_data = print_data
         self.log_file = log_file
         self.batch_mode = batch_mode
         self.num_motors = self.determine_num_motors()
         self.expected_values = 3 + 2 * self.num_motors  # time, voltage, current, and (throttle, rpm) for each motor
 
-        self.fig, (self.ax1, self.ax2, self.ax3, self.ax4) = plt.subplots(4, 1, figsize=(12, 20), sharex=True)
-        
-        # Add this line to make the window fill the screen
-        mng = plt.get_current_fig_manager()
-        mng.full_screen_toggle()
+        px = 1/plt.rcParams['figure.dpi']  # pixel in inches
+        self.fig, (self.ax1, self.ax2, self.ax3, self.ax4) = plt.subplots(4, 1, figsize=(1200*px, 800*px), sharex=True)
         self.lines = []
         self.data = deque(maxlen=MAX_DATA_POINTS)
         self.last_update = time.time()
@@ -153,6 +152,8 @@ class DynamometerPlotter:
                 try:
                     decoded_line = line.decode().strip()
                     if decoded_line:
+                        if self.print_data:
+                            print(decoded_line)
                         with open(self.output_file, 'a') as f:
                             f.write(decoded_line + '\n')
 
@@ -188,7 +189,6 @@ class DynamometerPlotter:
             rpms = list(zip(*[d[4] for d in self.data]))
 
             if not self.lines:
-                print("Creating new plot lines")
                 for i in range(self.num_motors):
                     self.lines.append(self.ax1.plot(x, throttles[i], label=f'Throttle {i+1}')[0])
                     self.lines.append(self.ax2.plot(x, rpms[i], label=f'RPM {i+1}')[0])
@@ -282,9 +282,14 @@ def process_all_logs():
     print("Finished processing all log files")
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == '-p':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("log_file", nargs="?", default=None)
+    parser.add_argument("-p", "--print", action="store_true", help="Print serial data to terminal")
+    parser.add_argument("-a", "--all", action="store_true", help="Process all log files")
+    args = parser.parse_args()
+
+    if args.all:
         process_all_logs()
     else:
-        log_file = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1].endswith('.log') else None
-        plotter = DynamometerPlotter(log_file)
+        plotter = DynamometerPlotter(args.log_file, print_data=args.print)
         plotter.run()
