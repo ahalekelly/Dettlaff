@@ -92,6 +92,11 @@ void setup()
         Serial.print(voltageCalibrationFactor * batteryADC_mv * 11);
     }
 
+    if (dshotBidirectional == NO_BIDIRECTION && closedLoopFlywheels == true) {
+        Serial.println("You must turn on bidirectional dshot to have closed loop!");
+        closedLoopFlywheels = false;
+    }
+
     switch (board.pusherDriverType) {
     case HBRIDGE_DRIVER:
         pusher = new Hbridge(board.pusher1H, board.pusher1L, board.pusher2H, board.pusher2L, maxDutyCycle_pct, pwmFreq_hz, deadtime);
