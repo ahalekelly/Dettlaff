@@ -3,6 +3,6 @@ arduino_secrets.h
 .vscode/launch.json
 .pio
 *.DS_Store
-dyno-graph/dyno-graph
+dyno-graph/venv
 dyno-graph/*.log
 dyno-graph/*.png

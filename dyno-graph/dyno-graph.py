@@ -34,9 +34,9 @@ class DynamometerPlotter:
         self.log_file = log_file
         self.batch_mode = batch_mode
         self.num_motors = self.determine_num_motors()
-        self.expected_values = 2 + 2 * self.num_motors  # time, voltage, and (throttle, rpm) for each motor
+        self.expected_values = 3 + 2 * self.num_motors  # time, voltage, current, and (throttle, rpm) for each motor
 
-        self.fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(3, 1, figsize=(12, 15), sharex=True)
+        self.fig, (self.ax1, self.ax2, self.ax3, self.ax4) = plt.subplots(4, 1, figsize=(12, 20), sharex=True)
         self.lines = []
         self.data = deque(maxlen=MAX_DATA_POINTS)
         self.last_update = time.time()
@@ -74,18 +74,21 @@ class DynamometerPlotter:
                 for line in f:
                     if line.strip() and not any(c.isalpha() for c in line):
                         values = line.strip().split(',')
-                        return (len(values) - 2) // 2  # Subtract time and voltage, divide by 2 for (throttle, rpm) pairs
+                        return (len(values) - 3) // 2  # Subtract time, voltage, and pusherCurrent, divide by 2 for (throttle, rpm) pairs
         else:
             # For real-time data, we'll determine this when we receive the first data point
             return 0
 
     def read_from_log(self):
+        max_timestamp = 0  # Initialize max_timestamp
         with open(self.log_file, 'r') as f:
             for row in csv.reader(f):
                 if row and not any(c.isalpha() for c in ''.join(row)):
                     if len(row) == self.expected_values and all(self.is_number(x) for x in row):
                         self.process_data(row)
+                        max_timestamp = max(max_timestamp, int(row[0]))  # Update max_timestamp as int
         print(f"Finished reading log file. Total data points: {len(self.data)}")
+        print(f"Max timestamp value: {max_timestamp}")  # Print max_timestamp
         self.update_plot(0)  # Ensure the plot is updated after reading the log file
 
     def is_number(self, s):
@@ -100,15 +103,15 @@ class DynamometerPlotter:
             print(f"Ignoring row with unexpected number of values: {row}")
             return  # Ignore lines with unexpected number of values
 
-        time_ms, voltage_mv = map(float, row[:2])
+        time_ms, voltage_mv, pusher_current_ma = int(row[0]), float(row[1]), float(row[2])
         voltage = voltage_mv / 1000
 
         throttles = []
         rpms = []
         
         for i in range(self.num_motors):
-            throttle = float(row[2 + i*2])
-            rpm = float(row[3 + i*2])
+            throttle = float(row[3 + i*2])
+            rpm = float(row[4 + i*2])
             throttles.append(throttle)
             rpms.append(rpm)
             self.min_throttles[i] = min(self.min_throttles[i], throttle)
@@ -122,7 +125,7 @@ class DynamometerPlotter:
         relative_time = time_ms - self.start_time
 
         with self.data_lock:
-            self.data.append((relative_time, voltage, throttles, rpms))
+            self.data.append((relative_time, voltage, pusher_current_ma, throttles, rpms))
         
         self.min_voltage = min(self.min_voltage, voltage)
         self.end_voltage = voltage
@@ -151,8 +154,8 @@ class DynamometerPlotter:
 
                         row = decoded_line.split(',')
                         if self.num_motors == 0:
-                            self.num_motors = (len(row) - 2) // 2
-                            self.expected_values = 2 + 2 * self.num_motors
+                            self.num_motors = (len(row) - 3) // 2
+                            self.expected_values = 3 + 2 * self.num_motors
                             self.min_throttles = [float('inf')] * self.num_motors
                             self.max_throttles = [float('-inf')] * self.num_motors
                             self.max_rpms = [float('-inf')] * self.num_motors
@@ -168,7 +171,6 @@ class DynamometerPlotter:
     def update_plot(self, frame):
         with self.data_lock:
             if len(self.data) == 0:
-                print("No data to plot")
                 return
 
             if self.new_run:
@@ -177,45 +179,57 @@ class DynamometerPlotter:
 
             x = [d[0] for d in self.data]  # Time in ms
             voltage = [d[1] for d in self.data]
-            throttles = list(zip(*[d[2] for d in self.data]))
-            rpms = list(zip(*[d[3] for d in self.data]))
+            pusher_current = [d[2] for d in self.data]
+            throttles = list(zip(*[d[3] for d in self.data]))
+            rpms = list(zip(*[d[4] for d in self.data]))
 
             if not self.lines:
                 print("Creating new plot lines")
-                self.lines.append(self.ax1.plot(x, voltage, label='Battery Voltage')[0])
                 for i in range(self.num_motors):
-                    self.lines.append(self.ax2.plot(x, throttles[i], label=f'Throttle {i+1}')[0])
-                    self.lines.append(self.ax3.plot(x, rpms[i], label=f'RPM {i+1}')[0])
+                    self.lines.append(self.ax1.plot(x, throttles[i], label=f'Throttle {i+1}')[0])
+                    self.lines.append(self.ax2.plot(x, rpms[i], label=f'RPM {i+1}')[0])
+                self.lines.append(self.ax3.plot(x, voltage, label='Battery Voltage')[0])
+                self.lines.append(self.ax4.plot(x, pusher_current, label='Pusher Current')[0])
 
                 # Save the plot as PNG
                 self.save_plot_as_png()
 
             else:
-                self.lines[0].set_data(x, voltage)
                 for i in range(self.num_motors):
-                    self.lines[1 + i*2].set_data(x, throttles[i])
-                    self.lines[2 + i*2].set_data(x, rpms[i])
+                    self.lines[i*2].set_data(x, throttles[i])
+                    self.lines[i*2 + 1].set_data(x, rpms[i])
+                self.lines[-2].set_data(x, voltage)
+                self.lines[-1].set_data(x, pusher_current)
 
-            for ax in (self.ax1, self.ax2, self.ax3):
+            for ax in (self.ax1, self.ax2, self.ax3, self.ax4):
                 ax.relim()
                 ax.autoscale_view()
                 ax.set_ylim(bottom=0)
                 ax.grid(True, which='both', linestyle='--', alpha=0.7)
 
-            self.ax1.set_ylabel('Battery Voltage (V)')
-            self.ax2.set_ylabel('Throttle Value')
-            self.ax2.set_ylim(0, 2050)  # Increased to 2050
-
+            self.ax1.set_ylabel('Throttle Value')
+            self.ax1.set_ylim(0, 2050)  # Increased to 2050
+            
             # Set RPM y-axis limit with some headroom
             rpm_limit = max(1000, int(self.max_rpm_overall * 1.1))  # At least 1000, or 10% above max observed RPM
-            self.ax3.set_ylim(0, rpm_limit)
-            self.ax3.set_ylabel('RPM')
+            self.ax2.set_ylim(0, rpm_limit)
+            self.ax2.set_ylabel('RPM')
+            self.ax3.set_ylabel('Battery Voltage (V)')
+            self.ax3.set_ylim(bottom=0)  # Set the bottom limit to 0
+            
+            self.ax4.set_ylabel('Pusher Current (mA)')
+            self.ax4.set_ylim(bottom=0)  # Set the bottom limit to 0
+            self.ax3.set_ylabel('Battery Voltage (V)')
+            self.ax3.set_ylim(bottom=0)  # Set the bottom limit to 0
+            
+            self.ax4.set_ylabel('Pusher Current (mA)')
+            self.ax4.set_ylim(bottom=0)  # Set the bottom limit to 0
 
-            self.ax3.set_xlabel('Time (ms)')
+            self.ax4.set_xlabel('Time (ms)')
             
             # Update legend positions
-            self.ax2.legend(loc='lower right')
             self.ax3.legend(loc='lower right')
+            self.ax4.legend(loc='lower right')
 
             # Set x-axis to exactly fit the data
             if x:

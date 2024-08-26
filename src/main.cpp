@@ -442,7 +442,7 @@ void loop()
         for (int i = 0; i < 4; i++) {
             if (motors[i]) {
                 if (dshotBidirectional == ENABLE_BIDIRECTION) {
-                    tempRPM = dshot[i].get_dshot_RPM();
+                    tempRPM = static_cast<int32_t>(dshot[i].get_dshot_RPM());
                     if (tempRPM > 0) { // todo: rate of change filtering
                         motorRPM[i] = tempRPM;
                     }
