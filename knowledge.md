@@ -5,13 +5,13 @@
 - The project includes hardware designs and software for controlling and monitoring the blaster
 
 ## Key Components
-- dyno-graph: A Python script for plotting dynamometer data
+- dyno: A Python script for plotting dynamometer data
 - src: Contains the main source code for the controller
 - hardware: Contains hardware designs and documentation
 
 ## Development Environment
 - Uses PlatformIO for embedded development
-- Python virtual environment for dyno-graph script
+- Python virtual environment for dyno script
 
 ## Flashing Instructions
 - Firmware can be flashed over USB or WiFi

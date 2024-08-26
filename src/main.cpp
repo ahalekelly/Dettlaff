@@ -460,7 +460,7 @@ void loop()
             }
         }
 
-        // Telemetry logging for use with dyno-graph python script
+        // Telemetry logging for use with dyno python script
         if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && triggerTime_us != 0 && loopStartTimer_us - triggerTime_us < 250000) {
             Serial.print((loopStartTimer_us - triggerTime_us) / 1000);
             Serial.print(",");

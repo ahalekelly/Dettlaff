@@ -1,7 +1,7 @@
-# Dyno-Graph Knowledge
+# dyno Knowledge
 
 ## Purpose
-- The dyno-graph script is used for plotting dynamometer data for the Dettlaff project
+- The dyno script is used for plotting dynamometer data for the Dettlaff project
 
 ## Key Features
 - Reads data from a log file or serial port
@@ -10,7 +10,7 @@
 - Saves plots as PNG files
 
 ## Usage
-- Can be run with a log file: `venv/bin/python dyno-graph.py [logfile]`
+- Can be run with a log file: `venv/bin/python dyno.py [logfile]`
 - Can also capture real-time data from a serial port
 
 ## Dependencies
@@ -32,7 +32,7 @@
 
 # Python Virtual Environment Instructions:
 
-`cd` to the dyno-graph directory
+`cd` to the dyno directory
 
 ## Setup:
 
@@ -45,13 +45,13 @@ Install requirements inside that venv:
 ## Usage:
 
 To capture and plot the serial telemetry, run 
-    venv/bin/python dyno-graph.py
+    venv/bin/python dyno.py
 
 If you want to also print the serial data while it's coming in:
-    venv/bin/python dyno-graph.py -p
+    venv/bin/python dyno.py -p
 
 To regenerate the plot for an existing log file:
-    venv/bin/python dyno-graph.py 2024-08-25_21:30:04.log
+    venv/bin/python dyno.py 2024-08-25_21:30:04.log
 
 To regenerate the plots for all log files:
-    venv/bin/python dyno-graph.py all
+    venv/bin/python dyno.py all

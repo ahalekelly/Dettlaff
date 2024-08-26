@@ -1,6 +1,6 @@
 Python Virtual Environment Instructions:
 
-`cd` to the dyno-graph directory
+`cd` to the dyno directory
 
 # Setup:
 
@@ -13,13 +13,13 @@ Install requirements inside that venv:
 # Usage:
 
 To capture and plot the serial telemetry, run 
-    venv/bin/python dyno-graph.py
+    venv/bin/python dyno.py
 
 If you want to also print the serial data while it's coming in:
-    venv/bin/python dyno-graph.py -p
+    venv/bin/python dyno.py -p
 
 To regenerate the plot for an existing log file:
-    venv/bin/python dyno-graph.py 2024-08-25_21:30:04.log
+    venv/bin/python dyno.py 2024-08-25_21:30:04.log
 
 To regenerate the plots for all log files:
-    venv/bin/python dyno-graph.py -a
+    venv/bin/python dyno.py -a
