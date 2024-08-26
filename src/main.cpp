@@ -13,42 +13,49 @@
 #include <esp_wifi.h>
 
 uint32_t loopStartTimer_us = micros();
-uint16_t loopTime_us = targetLoopTime_us;
+uint32_t loopTime_us = targetLoopTime_us;
 uint32_t time_ms = millis();
 uint32_t lastRevTime_ms = 0; // for calculating idling
 uint32_t pusherTimer_ms = 0;
-uint32_t revRPM[4]; // stores value from revRPMSet on boot for current firing mode
-uint32_t idleRPM[4]; // stores value from idleRPMSet on boot for current firing mode
-uint32_t idleTime_ms; // stores value from idleTimeSet_ms on boot for current firing mode
+int32_t revRPM[4]; // stores value from revRPMSet on boot for current firing mode
+int32_t idleRPM[4]; // stores value from idleRPMSet on boot for current firing mode
+int32_t idleTime_ms; // stores value from idleTimeSet_ms on boot for current firing mode
 uint16_t firingDelay_ms; // stores value from firingDelaySet_ms on boot for current firing mode
-uint32_t zeroRPM[4] = { 0, 0, 0, 0 };
-uint32_t (*targetRPM)[4]; // a pointer to a uint32_t[4] array. always points to either revRPM, idleRPM, or zeroRPM
-uint32_t firingRPM[4];
-uint32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
+int32_t zeroRPM[4] = { 0, 0, 0, 0 };
+int32_t (*targetRPM)[4]; // a pointer to a int32_t[4] array. always points to either revRPM, idleRPM, or zeroRPM
+int32_t firingRPM[4];
+int32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
 uint16_t burstLength; // stores value from burstLengthSet for current firing mode
 uint8_t bufferMode; // stores value from bufferModeSet for current firing mode
 int8_t firingMode = 0; // stores value from firingModeSet for current firing mode
-uint32_t dshotValue = 0;
+int32_t dshotValue = 0;
 int16_t shotsToFire = 0;
 flywheelState_t flywheelState = STATE_IDLE;
 bool firing = false;
 bool reverseBraking = false;
 bool pusherDwelling = false;
-bool closedLoopFlywheels = false;
-uint32_t batteryADC_mv = 0;
-uint32_t batteryVoltage_mv = 14800;
-uint32_t pusherShunt_mv = 0;
-uint32_t pusherCurrent_ma = 0;
-const uint32_t maxThrottle = 1999;
-uint32_t motorRPM[4] = { 0, 0, 0, 0 };
+int32_t batteryADC_mv = 0;
+int32_t batteryVoltage_mv = 14800;
+int32_t pusherShunt_mv = 0;
+int32_t pusherCurrent_ma = 0;
+int32_t pusherCurrentSmoothed_ma = 0;
+const int32_t maxThrottle = 1999;
+int32_t motorRPM[4] = { 0, 0, 0, 0 };
 Driver* pusher;
 bool wifiState = false;
 // String telemBuffer = "";
 int8_t telemMotorNum = -1; // 0-3
 uint32_t triggerTime_us = 0;
-uint32_t tempRPM;
+int32_t tempRPM;
 ESP32AnalogRead batteryADC;
-// ESP32AnalogRead pusherShuntADC;
+ESP32AnalogRead pusherShuntADC;
+
+// closed loop variables
+int32_t PIDError[4];
+int32_t PIDErrorPrior[4];
+int32_t closedLoopRPM[4];
+int32_t PIDOutput[4];
+int32_t PIDIntegral = 0;
 
 Bounce2::Button revSwitch = Bounce2::Button();
 Bounce2::Button triggerSwitch = Bounce2::Button();
@@ -146,18 +153,23 @@ void setup()
         servo[2].attach(board.esc3);
         servo[3].attach(board.esc4);
     } else {
-        for (int i = 0; i < numMotors; i++) {
-            dshot[i].begin(dshotMode, dshotBidirectional, 14); // bitrate, bidirectional, and motor pole count
+        for (int i = 0; i < 4; i++) {
+            if (motors[i]) {
+                dshot[i].begin(dshotMode, dshotBidirectional, 14); // bitrate, bidirectional, and motor pole count
+            }
         }
     }
-
-    updateFiringMode();
+    if (variableFPS) {
+        updateFiringMode();
+    }
 
     // change FPS using select fire switch position at boot time
-    for (int i = 0; i < numMotors; i++) {
-        revRPM[i] = revRPMset[firingMode][i];
-        idleRPM[i] = idleRPMset[firingMode][i];
-        firingRPM[i] = revRPM[i] * 0.9;
+    for (int i = 0; i < 4; i++) {
+        if (motors[i]) {
+            revRPM[i] = revRPMset[firingMode][i];
+            idleRPM[i] = idleRPMset[firingMode][i];
+            firingRPM[i] = revRPM[i] - 10000;
+        }
     }
     idleTime_ms = idleTimeSet_ms[firingMode];
     firingDelay_ms = firingDelaySet_ms[firingMode];
@@ -170,8 +182,10 @@ void setup()
     }
 
     for (int count = 0; count < 10000; count++) {
-        for (uint8_t i = 0; i < numMotors; i++) {
-            dshot[i].send_dshot_value(0, NO_TELEMETRIC);
+        for (int i = 0; i < 4; i++) {
+            if (motors[i]) {
+                dshot[i].send_dshot_value(0, NO_TELEMETRIC);
+            }
         }
     }
 
@@ -184,11 +198,12 @@ void setup()
         digitalWrite(board.nSleep, HIGH);
     }
 
-    // pusherShuntADC.attach(board.pusherShunt);
-
+    batteryADC.attach(board.batteryADC);
+    pusherShuntADC.attach(board.pusherShunt);
+    /**
     if (wifiDuration_ms > 0) {
         WiFiInit();
-    }
+    }**/
 }
 
 void loop()
@@ -204,7 +219,7 @@ void loop()
     updateFiringMode();
     // changes burst options
     burstLength = burstLengthSet[firingMode];
-    bufferMode = BufferModeSet[firingMode];
+    bufferMode = bufferModeSet[firingMode];
 
     // Transfer data from telemetry serial port to telemetry serial buffer:
     // while (Serial2.available()) {
@@ -250,18 +265,25 @@ void loop()
             targetRPM = &idleRPM;
         } else { // stop flywheels
             targetRPM = &zeroRPM;
+            PIDIntegral = 0;
         }
         break;
 
     case STATE_ACCELERATING:
         if (closedLoopFlywheels) {
             // If ALL motors are at target RPM update the blaster's state to FULLSPEED.
-            // in the future add predictive capacity for when they'll be up to speed in the future, taking into account pusher delay
-            if (motorRPM[0] > firingRPM[0] && (numMotors <= 1 || motorRPM[1] > firingRPM[1]) && (numMotors <= 2 || motorRPM[2] > firingRPM[2]) && (numMotors <= 3 || motorRPM[3] > firingRPM[3])) {
+            // clang-format off
+            if ((!motors[0] || motorRPM[0] > firingRPM[0]) &&
+                (!motors[1] || motorRPM[1] > firingRPM[1]) &&
+                (!motors[2] || motorRPM[2] > firingRPM[2]) &&
+                (!motors[3] || motorRPM[3] > firingRPM[3])
+            ) {
+                // clang-format on
+                Serial.print(time_ms - triggerTime_us / 1000);
                 flywheelState = STATE_FULLSPEED;
             }
-
-        } else if (!closedLoopFlywheels && time_ms > lastRevTime_ms + firingDelay_ms) {
+        }
+        if ((!closedLoopFlywheels || timeOverride) && time_ms > lastRevTime_ms + firingDelay_ms) {
             flywheelState = STATE_FULLSPEED;
         }
         break;
@@ -358,22 +380,38 @@ void loop()
     batteryADC_mv = batteryADC.readMiliVolts();
     batteryVoltage_mv = voltageCalibrationFactor * (batteryADC_mv * 11 * (100 - voltageSmoothingFactor) + batteryVoltage_mv * voltageSmoothingFactor) / 100; // apply exponential moving average to smooth out noise
 
-    // Serial.println(batteryVoltage_mv);
+    pusherShunt_mv = pusherShuntADC.readMiliVolts();
+    pusherCurrent_ma = pusherShunt_mv * 3070 / 1000;
+    pusherCurrentSmoothed_ma = (pusherCurrent_ma * (100 - pusherCurrentSmoothingFactor) + pusherCurrentSmoothed_ma * pusherCurrentSmoothingFactor) / 100;
 
-    // pusherShunt_mv = pusherShuntADC.readMiliVolts();
-    // pusherCurrent_ma = (pusherShunt_mv * 3070 / 1000 * (100 - pusherCurrentSmoothingFactor) + pusherCurrent_ma * pusherCurrentSmoothingFactor) / 100;
+    if (closedLoopFlywheels) { // PID Control
+        for (int i = 0; i < 4; i++) {
+            if (motors[i]) {
+                PIDError[i] = (*targetRPM)[i] - motorRPM[i];
 
-    // Serial.println(pusherCurrent_ma);
+                PIDOutput[i] = KP * PIDError[i] + KI * (PIDIntegral + PIDError[i] * loopTime_us / 1000000) + KD * (PIDError[i] - PIDErrorPrior[i]) / loopTime_us * 1000000;
+                closedLoopRPM[i] = PIDOutput[i] + motorRPM[i];
 
-    if (closedLoopFlywheels) {
-        // PID control code goes here
+                if (throttleValue[i] == 0) {
+                    throttleValue[i] = min(maxThrottle, maxThrottle * closedLoopRPM[i] / batteryVoltage_mv * 1000 / motorKv);
+                } else {
+                    throttleValue[i] = max(min(maxThrottle, maxThrottle * closedLoopRPM[i] / batteryVoltage_mv * 1000 / motorKv),
+                        throttleValue[i] - 1);
+                }
+
+                PIDErrorPrior[i] = PIDError[i];
+                PIDIntegral += PIDIntegral + PIDError[i] * loopTime_us / 1000000;
+            }
+        }
     } else { // open loop case
-        for (int i = 0; i < numMotors; i++) {
-            if (throttleValue[i] == 0) {
-                throttleValue[i] = min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv);
-            } else {
-                throttleValue[i] = max(min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv),
-                    throttleValue[i] - 1);
+        for (int i = 0; i < 4; i++) {
+            if (motors[i]) {
+                if (throttleValue[i] == 0) {
+                    throttleValue[i] = min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv);
+                } else {
+                    throttleValue[i] = max(min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv),
+                        throttleValue[i] - 1);
+                }
             }
         }
     }
@@ -386,50 +424,54 @@ void loop()
             digitalWrite(board.flywheel, LOW);
         }
     } else if (dshotMode == DSHOT_OFF) {
-        for (int i = 0; i < numMotors; i++) {
-            servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
-            /*
-            Serial.print((*targetRPM)[i]);
-            Serial.print(" ");
-            Serial.print(throttleValue[i] / 2 + 1000);
-            Serial.print(" ");
-            */
+        for (int i = 0; i < 4; i++) {
+            if (motors[i]) {
+                servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
+                /*
+                Serial.print((*targetRPM)[i]);
+                Serial.print(" ");
+                Serial.print(throttleValue[i] / 2 + 1000);
+                Serial.print(" ");
+                */
+            }
         }
         //    Serial.println("");
     } else {
-        for (int8_t i = 0; i < numMotors; i++) {
-            if (dshotBidirectional == ENABLE_BIDIRECTION) {
-                tempRPM = dshot[i].get_dshot_RPM();
-                if (tempRPM > 0) { // todo: rate of change filtering
-                    motorRPM[i] = tempRPM;
+        for (int i = 0; i < 4; i++) {
+            if (motors[i]) {
+                if (dshotBidirectional == ENABLE_BIDIRECTION) {
+                    tempRPM = dshot[i].get_dshot_RPM();
+                    if (tempRPM > 0) { // todo: rate of change filtering
+                        motorRPM[i] = tempRPM;
+                    }
+                }
+                if (throttleValue[i] == 0) {
+                    dshotValue = 0;
+                } else {
+                    dshotValue = throttleValue[i] + 48;
+                }
+                if (i == telemMotorNum) {
+                    dshot[i].send_dshot_value(dshotValue, ENABLE_TELEMETRIC);
+                } else {
+                    dshot[i].send_dshot_value(dshotValue, NO_TELEMETRIC);
                 }
             }
-            if (throttleValue[i] == 0) {
-                dshotValue = 0;
-            } else {
-                dshotValue = throttleValue[i] + 48;
-            }
-            if (i == telemMotorNum) {
-                dshot[i].send_dshot_value(dshotValue, ENABLE_TELEMETRIC);
-            } else {
-                dshot[i].send_dshot_value(dshotValue, NO_TELEMETRIC);
-            }
         }
-        if (printTelemetry && triggerTime_us != 0 && loopStartTimer_us - triggerTime_us < 250000) {
+
+        // Telemetry logging for use with dyno-graph python script
+        if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && triggerTime_us != 0 && loopStartTimer_us - triggerTime_us < 250000) {
             Serial.print((loopStartTimer_us - triggerTime_us) / 1000);
-            Serial.print(" ");
+            Serial.print(",");
             Serial.print(batteryVoltage_mv);
-            Serial.print(" ");
-            Serial.print(throttleValue[0]);
-            Serial.print(" ");
-            if (dshotBidirectional == ENABLE_BIDIRECTION) {
-                Serial.print(motorRPM[0]);
-                Serial.print(" ");
-                Serial.print(motorRPM[1]);
-                Serial.print(" ");
-                Serial.print(motorRPM[2]);
-                Serial.print(" ");
-                Serial.print(motorRPM[3]);
+            Serial.print(",");
+            Serial.print(pusherCurrent_ma);
+            for (int i = 0; i < 4; i++) {
+                if (motors[i]) {
+                    Serial.print(",");
+                    Serial.print(throttleValue[i]);
+                    Serial.print(",");
+                    Serial.print(motorRPM[i]);
+                }
             }
             Serial.println();
         }
