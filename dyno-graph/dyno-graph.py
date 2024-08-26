@@ -37,6 +37,10 @@ class DynamometerPlotter:
         self.expected_values = 3 + 2 * self.num_motors  # time, voltage, current, and (throttle, rpm) for each motor
 
         self.fig, (self.ax1, self.ax2, self.ax3, self.ax4) = plt.subplots(4, 1, figsize=(12, 20), sharex=True)
+        
+        # Add this line to make the window fill the screen
+        mng = plt.get_current_fig_manager()
+        mng.full_screen_toggle()
         self.lines = []
         self.data = deque(maxlen=MAX_DATA_POINTS)
         self.last_update = time.time()
@@ -228,8 +232,8 @@ class DynamometerPlotter:
             self.ax4.set_xlabel('Time (ms)')
             
             # Update legend positions
-            self.ax3.legend(loc='lower right')
-            self.ax4.legend(loc='lower right')
+            self.ax1.legend(loc='lower right')
+            self.ax2.legend(loc='lower right')
 
             # Set x-axis to exactly fit the data
             if x:
@@ -261,7 +265,7 @@ class DynamometerPlotter:
         else:
             print("Starting real-time plotting")
             ani = FuncAnimation(self.fig, self.update_plot, interval=100, cache_frame_data=False)
-            plt.show()
+            plt.show()  # This will block until the window is closed
         
         self.running = False
         if hasattr(self, 'data_thread'):
