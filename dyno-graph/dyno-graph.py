@@ -193,9 +193,6 @@ class DynamometerPlotter:
                 self.lines.append(self.ax3.plot(x, voltage, label='Battery Voltage')[0])
                 self.lines.append(self.ax4.plot(x, pusher_current, label='Pusher Current')[0])
 
-                # Save the plot as PNG
-                self.save_plot_as_png()
-
             else:
                 for i in range(self.num_motors):
                     self.lines[i*2].set_data(x, throttles[i])
@@ -247,6 +244,7 @@ class DynamometerPlotter:
                 verticalalignment='top', horizontalalignment='left',
                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
+        self.save_plot_as_png()
         return self.lines + [self.min_max_text]
 
     def save_plot_as_png(self):
