@@ -6,7 +6,7 @@ bool variableFPS = true;
 int32_t revRPMset[3][4] = { { 40000, 40000, 30000, 30000 }, { 35000, 35000, 25000, 25000 }, { 14000, 14000, 14000, 14000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
 int32_t idleRPMset[3][4] = { { 1000, 1000, 1000, 1000 }, { 1000, 1000, 1000, 1000 }, { 1000, 1000, 1000, 1000 } }; // adjust this to change idleRPM, groups are firingMode 1, 2, 3, and elements in group are individual motor RPM
 uint32_t idleTimeSet_ms[3] = { 30000, 30000, 30000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds, for firingMode 1, 2, 3
-uint32_t firingDelaySet_ms[3] = { 500, 500, 500 }; // delay to allow flywheels to spin up before firing dart for firingMode 1, 2, 3
+uint32_t firingDelaySet_ms[3] = { 75, 75, 75 }; // delay to allow flywheels to spin up before firing dart for firingMode 1, 2, 3
 
 // Live selector settings, change with switch
 uint32_t burstLengthSet[3] = { 500, 2, 1 };
@@ -27,7 +27,7 @@ bool brushedFlywheels = false; // solder a brushed motor flywheel cage to the ES
 
 // Closed Loop Settings
 flywheelControlType_t flywheelControl = TWO_LEVEL_CONTROL; //     OPEN_LOOP_CONTROL, TWO_LEVEL_CONTROL, or PID_CONTROL
-bool timeOverride = true;
+bool timeOverride = false;
 int32_t fullThrottleRpmTolerance = 2000; // if rpm is more than this amount below target rpm, send full throttle
 int32_t firingRPMTolerance = 10000; // fire pusher when all flywheels are within this amount of target rpm. higher values will mean less pusher delay but potentially fire too early
 
