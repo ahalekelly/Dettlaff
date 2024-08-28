@@ -18,9 +18,7 @@ uint32_t time_ms = millis();
 uint32_t lastRevTime_ms = 0; // for calculating idling
 uint32_t pusherTimer_ms = 0;
 int32_t revRPM[4]; // stores value from revRPMSet on boot for current firing mode
-int32_t idleRPM[4]; // stores value from idleRPMSet on boot for current firing mode
 int32_t idleTime_ms; // stores value from idleTimeSet_ms on boot for current firing mode
-uint16_t firingDelay_ms; // stores value from firingDelaySet_ms on boot for current firing mode
 int32_t zeroRPM[4] = { 0, 0, 0, 0 };
 int32_t (*targetRPM)[4]; // a pointer to a int32_t[4] array. always points to either revRPM, idleRPM, or zeroRPM
 int32_t firingRPM[4];
@@ -28,6 +26,8 @@ int32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
 uint16_t burstLength; // stores value from burstLengthSet for current firing mode
 uint8_t bufferMode; // stores value from bufferModeSet for current firing mode
 int8_t firingMode = 0; // stores value from firingModeSet for current firing mode
+int8_t fpsMode = 0; // copy of firingMode locked at boot
+bool fromIdle;
 bidirectional_mode_e dshotBidirectional = NO_BIDIRECTION;
 int32_t dshotValue = 0;
 int16_t shotsToFire = 0;
@@ -168,21 +168,21 @@ void setup()
             }
         }
     }
+
+    // change FPS using select fire switch position at boot time
     if (variableFPS) {
         updateFiringMode();
     }
 
-    // change FPS using select fire switch position at boot time
+    fpsMode = firingMode;
     for (int i = 0; i < 4; i++) {
         if (motors[i]) {
-            revRPM[i] = revRPMset[firingMode][i];
-            idleRPM[i] = idleRPMset[firingMode][i];
-            firingRPM[i] = revRPM[i] - 10000;
+            revRPM[i] = revRPMset[fpsMode][i];
+            firingRPM[i] = revRPM[i] - firingRPMTolerance;
             fullThrottleRpmThreshold[i] = revRPM[i] - fullThrottleRpmTolerance;
         }
     }
-    idleTime_ms = idleTimeSet_ms[firingMode];
-    firingDelay_ms = firingDelaySet_ms[firingMode];
+    idleTime_ms = idleTimeSet_ms[fpsMode];
 
     if (board.flywheel) {
         pinMode(board.flywheel, OUTPUT);
@@ -276,26 +276,38 @@ void loop()
         } else { // stop flywheels
             targetRPM = &zeroRPM;
             PIDIntegral = 0;
+            fromIdle = false;
         }
         break;
 
     case STATE_ACCELERATING:
-        if (flywheelControl != OPEN_LOOP_CONTROL) {
-            // If ALL motors are at target RPM update the blaster's state to FULLSPEED.
-            // clang-format off
+        // clang-format off
+        if (flywheelControl != OPEN_LOOP_CONTROL && time_ms > lastRevTime_ms + fromIdle ? minFiringDelayIdleSet_ms[fpsMode] : minFiringDelaySet_ms[fpsMode]) {
+            // If all motors are at target RPM, update the blaster's state to FULLSPEED.
             if ((!motors[0] || motorRPM[0] > firingRPM[0]) &&
                 (!motors[1] || motorRPM[1] > firingRPM[1]) &&
                 (!motors[2] || motorRPM[2] > firingRPM[2]) &&
                 (!motors[3] || motorRPM[3] > firingRPM[3])
             ) {
                 flywheelState = STATE_FULLSPEED;
+                fromIdle =  true;
             }
-            // clang-format on
         }
-        if ((flywheelControl == OPEN_LOOP_CONTROL || timeOverride) && time_ms > lastRevTime_ms + firingDelay_ms) {
+        if ((flywheelControl == OPEN_LOOP_CONTROL
+            || (timeOverrideWhenIdling &&
+                fromIdle &&
+                (!motors[0] || motorRPM[0] > 100) &&
+                (!motors[1] || motorRPM[1] > 100) &&
+                (!motors[2] || motorRPM[2] > 100) &&
+                (!motors[3] || motorRPM[3] > 100)
+            )
+            )
+            && time_ms > lastRevTime_ms + fromIdle ? firingDelayIdleSet_ms[fpsMode] : firingDelaySet_ms[fpsMode]) {
             flywheelState = STATE_FULLSPEED;
+            fromIdle = true;
         }
         break;
+        // clang-format on
 
     case STATE_FULLSPEED:
         if (!revSwitch.isPressed() && shotsToFire == 0 && !firing) {
