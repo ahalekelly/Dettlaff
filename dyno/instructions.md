@@ -1,25 +1,24 @@
-Python Virtual Environment Instructions:
+# Dettlaff Dynamometer
+
+Captures telemetry data over the serial bus, saves it to a .log file, and plots it to a .png file
+
+![2024-08-26_235631](https://github.com/user-attachments/assets/3997ee16-9f05-4feb-826f-fdf48b780678)
+
+## Setup:
+
+Make sure you have python installed
 
 `cd` to the dyno directory
 
-# Setup:
+Create a new venv called venv and install the requirements:
+    python3 -m venv venv && venv/bin/python -m pip install -r requirements.txt
 
-Create a new venv called venv:
-    python3 -m venv venv
+## Usage Examples:
 
-Install requirements inside that venv:
-    venv/bin/python -m pip install -r requirements.txt
+`cd` to the dyno directory
 
-# Usage:
-
-To capture and plot the serial telemetry, run 
+To capture and plot the serial telemetry:
     venv/bin/python dyno.py
 
-If you want to also print the serial data while it's coming in:
-    venv/bin/python dyno.py -p
-
-To regenerate the plot for an existing log file:
-    venv/bin/python dyno.py 2024-08-25_21:30:04.log
-
-To regenerate the plots for all log files:
+To regenerate the png files for all log files - the formatting on the real-time plots is a little off right now, this will fix them
     venv/bin/python dyno.py -a
