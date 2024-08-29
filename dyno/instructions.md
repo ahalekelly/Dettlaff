@@ -18,7 +18,9 @@ Create a new venv called venv and install the requirements:
 `cd` to the dyno directory
 
 To capture and plot the serial telemetry:
+
     venv/bin/python dyno.py
 
 To regenerate the png files for all log files - the formatting on the real-time plots is a little off right now, this will fix them
+
     venv/bin/python dyno.py -a
