@@ -11,6 +11,7 @@ Make sure you have python installed
 `cd` to the dyno directory
 
 Create a new venv called venv and install the requirements:
+
     python3 -m venv venv && venv/bin/python -m pip install -r requirements.txt
 
 ## Usage Examples:
