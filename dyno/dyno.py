@@ -307,6 +307,10 @@ class DynamometerPlotter:
                 verticalalignment='top', horizontalalignment='left',
                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
+            if pusher_current:
+                max_current = max(pusher_current)
+                self.ax4.set_ylim(0, max_current * 1.1)  # Add 10% headroom
+
         self.save_plot_as_png()
         return self.lines + [self.min_max_text]
 
