@@ -92,10 +92,10 @@ void setup()
     batteryADC_mv = batteryADC.readMiliVolts();
     batteryVoltage_mv = voltageCalibrationFactor * batteryADC_mv * 11;
     Serial.print("Battery voltage (before calibration): ");
-    Serial.print(batteryVoltage_mv);
+    Serial.println(batteryVoltage_mv);
     if (voltageCalibrationFactor != 1.0) {
         Serial.print("Battery voltage (after calibration): ");
-        Serial.print(voltageCalibrationFactor * batteryADC_mv * 11);
+        Serial.println(voltageCalibrationFactor * batteryADC_mv * 11);
     }
 
     if (flywheelControl != OPEN_LOOP_CONTROL) {
@@ -285,7 +285,7 @@ void loop()
 
     case STATE_ACCELERATING:
         // clang-format off
-        if (flywheelControl != OPEN_LOOP_CONTROL && time_ms > lastRevTime_ms + fromIdle ? minFiringDelayIdleSet_ms[fpsMode] : minFiringDelaySet_ms[fpsMode]) {
+        if (flywheelControl != OPEN_LOOP_CONTROL && time_ms > lastRevTime_ms + (fromIdle ? minFiringDelayIdleSet_ms[fpsMode] : minFiringDelaySet_ms[fpsMode])) {
             // If all motors are at target RPM, update the blaster's state to FULLSPEED.
             if ((!motors[0] || motorRPM[0] > firingRPM[0]) &&
                 (!motors[1] || motorRPM[1] > firingRPM[1]) &&
@@ -304,12 +304,12 @@ void loop()
                 (!motors[1] || motorRPM[1] > 100) &&
                 (!motors[2] || motorRPM[2] > 100) &&
                 (!motors[3] || motorRPM[3] > 100)
+                )
             )
-            )
-            && time_ms > lastRevTime_ms + fromIdle ? firingDelayIdleSet_ms[fpsMode] : firingDelaySet_ms[fpsMode]) {
-            flywheelState = STATE_FULLSPEED;
-            fromIdle = true;
-            Serial.println("STATE_FULLSPEED transition 2");
+            && time_ms > lastRevTime_ms + (fromIdle ? firingDelayIdleSet_ms[fpsMode] : firingDelaySet_ms[fpsMode])) {
+                flywheelState = STATE_FULLSPEED;
+                fromIdle = true;
+                Serial.println("STATE_FULLSPEED transition 2");
         }
         break;
         // clang-format on
