@@ -54,6 +54,7 @@ uint32_t triggerTime_us = 0;
 int32_t tempRPM;
 ESP32AnalogRead batteryADC;
 ESP32AnalogRead pusherShuntADC;
+bool currentlyLogging = false;
 
 // closed loop variables
 int32_t PIDError[4];
@@ -175,6 +176,8 @@ void setup()
     }
 
     fpsMode = firingMode;
+    Serial.print("fpsMode: ");
+    Serial.println(fpsMode);
     for (int i = 0; i < 4; i++) {
         if (motors[i]) {
             revRPM[i] = revRPMset[fpsMode][i];
@@ -291,6 +294,7 @@ void loop()
             ) {
                 flywheelState = STATE_FULLSPEED;
                 fromIdle =  true;
+                Serial.println("STATE_FULLSPEED transition 1");
             }
         }
         if ((flywheelControl == OPEN_LOOP_CONTROL
@@ -305,6 +309,7 @@ void loop()
             && time_ms > lastRevTime_ms + fromIdle ? firingDelayIdleSet_ms[fpsMode] : firingDelaySet_ms[fpsMode]) {
             flywheelState = STATE_FULLSPEED;
             fromIdle = true;
+            Serial.println("STATE_FULLSPEED transition 2");
         }
         break;
         // clang-format on
@@ -512,21 +517,27 @@ void loop()
         }
 
         // Telemetry logging for use with dyno python script
-        if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && triggerTime_us != 0 && loopStartTimer_us - triggerTime_us < 250000) {
-            Serial.print((loopStartTimer_us - triggerTime_us) / 1000);
-            Serial.print(",");
-            Serial.print(batteryADC_mv * 11);
-            Serial.print(",");
-            Serial.print(pusherCurrent_ma);
-            for (int i = 0; i < 4; i++) {
-                if (motors[i]) {
-                    Serial.print(",");
-                    Serial.print(throttleValue[i]);
-                    Serial.print(",");
-                    Serial.print(motorRPM[i]);
+        if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && triggerTime_us != 0) {
+            if (loopStartTimer_us - triggerTime_us < 250000) {
+                Serial.print((loopStartTimer_us - triggerTime_us) / 1000);
+                Serial.print(",");
+                Serial.print(batteryADC_mv * 11);
+                Serial.print(",");
+                Serial.print(pusherCurrent_ma);
+                for (int i = 0; i < 4; i++) {
+                    if (motors[i]) {
+                        Serial.print(",");
+                        Serial.print(throttleValue[i]);
+                        Serial.print(",");
+                        Serial.print(motorRPM[i]);
+                    }
                 }
+                Serial.println();
+                currentlyLogging = true;
+            } else if (currentlyLogging) { // was logging but logging period over
+                currentlyLogging = false;
+                Serial.println("end of telemetry");
             }
-            Serial.println();
         }
     }
     if (wifiState == true) {

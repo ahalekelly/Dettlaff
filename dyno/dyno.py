@@ -57,6 +57,8 @@ class DynamometerPlotter:
         self.max_rpm_overall = 0  # Track the overall maximum RPM
         self.line_width = LINE_WIDTH  # Add this line
         self.mask_starts = []  # Initialize mask_starts here  # Initialize mask_starts here
+        self.buffer = []  # Add this line to store data between updates
+        self.update_flag = False  # Add this line to control when to update the plot
 
         if log_file:
             print(f"Reading from log file: {log_file}")
@@ -171,148 +173,159 @@ class DynamometerPlotter:
                         with open(self.output_file, 'a') as f:
                             f.write(decoded_line + '\n')
 
-                        row = decoded_line.split(',')
-                        if self.num_motors == 0:
-                            self.num_motors = (len(row) - 3) // 2
-                            self.expected_values = 3 + 2 * self.num_motors
-                            self.min_throttles = [float('inf')] * self.num_motors
-                            self.max_throttles = [float('-inf')] * self.num_motors
-                            self.max_rpms = [float('-inf')] * self.num_motors
+                        if decoded_line == "end of telemetry":
+                            self.process_buffer()
+                            self.update_flag = True
+                        else:
+                            row = decoded_line.split(',')
+                            if self.num_motors == 0:
+                                self.num_motors = (len(row) - 3) // 2
+                                self.expected_values = 3 + 2 * self.num_motors
+                                self.min_throttles = [float('inf')] * self.num_motors
+                                self.max_throttles = [float('-inf')] * self.num_motors
+                                self.max_rpms = [float('-inf')] * self.num_motors
 
-                        if len(row) == self.expected_values and all(self.is_number(x) for x in row):
-                            self.process_data(row)
+                            if len(row) == self.expected_values and all(self.is_number(x) for x in row):
+                                self.buffer.append(row)
                 except UnicodeDecodeError:
                     print("Error decoding line from serial port")
                     pass
             except Exception as e:
                 print(f"Error reading serial data: {e}")
 
+    def process_buffer(self):
+        for row in self.buffer:
+            self.process_data(row)
+        self.buffer.clear()
+
     def update_plot(self, frame):
-        with self.data_lock:
-            if len(self.data) == 0:
-                return
+        if self.log_file or self.update_flag:
+            with self.data_lock:
+                if len(self.data) == 0:
+                    return
 
-            x = [d[0] for d in self.data]  # Time in ms
-            voltage = [d[1] for d in self.data]
-            pusher_current = [d[2] for d in self.data]
-            throttles = list(zip(*[d[3] for d in self.data]))
-            rpms = list(zip(*[d[4] for d in self.data]))
+                x = [d[0] for d in self.data]  # Time in ms
+                voltage = [d[1] for d in self.data]
+                pusher_current = [d[2] for d in self.data]
+                throttles = list(zip(*[d[3] for d in self.data]))
+                rpms = list(zip(*[d[4] for d in self.data]))
 
-            # Apply masks if mask_starts is not empty
-            if self.mask_starts:
-                voltage = ma.array(voltage)
-                pusher_current = ma.array(pusher_current)
-                throttles = [ma.array(t) for t in throttles]
-                rpms = [ma.array(r) for r in rpms]
-                for start in self.mask_starts:
-                    # Expand mask by 1 in each direction
-                    mask_start = max(0, start - 1)
-                    mask_end = min(len(voltage), start + 2)
-                    voltage[mask_start:mask_end] = ma.masked
-                    pusher_current[mask_start:mask_end] = ma.masked
-                    for t in throttles:
-                        t[mask_start:mask_end] = ma.masked
-                    for r in rpms:
-                        r[mask_start:mask_end] = ma.masked
-                pusher_current = ma.array(pusher_current)
-                throttles = [ma.array(t) for t in throttles]
-                rpms = [ma.array(r) for r in rpms]
-                for start in self.mask_starts:
-                    voltage[start] = ma.masked
-                    pusher_current[start] = ma.masked
-                    for t in throttles:
-                        t[start] = ma.masked
-                    for r in rpms:
-                        r[start] = ma.masked
+                # Apply masks if mask_starts is not empty
+                if self.mask_starts:
+                    voltage = ma.array(voltage)
+                    pusher_current = ma.array(pusher_current)
+                    throttles = [ma.array(t) for t in throttles]
+                    rpms = [ma.array(r) for r in rpms]
+                    for start in self.mask_starts:
+                        # Expand mask by 1 in each direction
+                        mask_start = max(0, start - 1)
+                        mask_end = min(len(voltage), start + 2)
+                        voltage[mask_start:mask_end] = ma.masked
+                        pusher_current[mask_start:mask_end] = ma.masked
+                        for t in throttles:
+                            t[mask_start:mask_end] = ma.masked
+                        for r in rpms:
+                            r[mask_start:mask_end] = ma.masked
+                    pusher_current = ma.array(pusher_current)
+                    throttles = [ma.array(t) for t in throttles]
+                    rpms = [ma.array(r) for r in rpms]
+                    for start in self.mask_starts:
+                        voltage[start] = ma.masked
+                        pusher_current[start] = ma.masked
+                        for t in throttles:
+                            t[start] = ma.masked
+                        for r in rpms:
+                            r[start] = ma.masked
 
-            # Apply masks if mask_starts is not empty
-            if self.mask_starts:
-                voltage = ma.array(voltage)
-                pusher_current = ma.array(pusher_current)
-                throttles = [ma.array(t) for t in throttles]
-                rpms = [ma.array(r) for r in rpms]
-                for start in self.mask_starts:
-                    voltage[start] = ma.masked
-                    pusher_current[start] = ma.masked
-                    for t in throttles:
-                        t[start] = ma.masked
-                    for r in rpms:
-                        r[start] = ma.masked
+                # Apply masks if mask_starts is not empty
+                if self.mask_starts:
+                    voltage = ma.array(voltage)
+                    pusher_current = ma.array(pusher_current)
+                    throttles = [ma.array(t) for t in throttles]
+                    rpms = [ma.array(r) for r in rpms]
+                    for start in self.mask_starts:
+                        voltage[start] = ma.masked
+                        pusher_current[start] = ma.masked
+                        for t in throttles:
+                            t[start] = ma.masked
+                        for r in rpms:
+                            r[start] = ma.masked
 
-            if not self.lines:
-                for i in range(len(throttles)):
-                    self.lines.append(self.ax1.plot(x, throttles[i], label=f'Throttle {i+1}', linewidth=self.line_width)[0])
-                    self.lines.append(self.ax2.plot(x, rpms[i], label=f'RPM {i+1}', linewidth=self.line_width)[0])
-                self.lines.append(self.ax3.plot(x, voltage, label='Battery Voltage', linewidth=self.line_width)[0])
-                self.lines.append(self.ax4.plot(x, pusher_current, label='Pusher Current', linewidth=self.line_width)[0])
-            else:
-                for i in range(len(throttles)):
-                    self.lines[i*2].set_data(x, throttles[i])
-                    self.lines[i*2 + 1].set_data(x, rpms[i])
-                self.lines[-2].set_data(x, voltage)
-                self.lines[-1].set_data(x, pusher_current)
+                if not self.lines:
+                    for i in range(len(throttles)):
+                        self.lines.append(self.ax1.plot(x, throttles[i], label=f'Throttle {i+1}', linewidth=self.line_width)[0])
+                        self.lines.append(self.ax2.plot(x, rpms[i], label=f'RPM {i+1}', linewidth=self.line_width)[0])
+                    self.lines.append(self.ax3.plot(x, voltage, label='Battery Voltage', linewidth=self.line_width)[0])
+                    self.lines.append(self.ax4.plot(x, pusher_current, label='Pusher Current', linewidth=self.line_width)[0])
+                else:
+                    for i in range(len(throttles)):
+                        self.lines[i*2].set_data(x, throttles[i])
+                        self.lines[i*2 + 1].set_data(x, rpms[i])
+                    self.lines[-2].set_data(x, voltage)
+                    self.lines[-1].set_data(x, pusher_current)
 
-            for ax in (self.ax1, self.ax2, self.ax3, self.ax4):
-                ax.relim()
-                ax.autoscale_view()
-                ax.set_ylim(bottom=0)
-                ax.grid(True, which='both', linestyle='--', alpha=0.7)
-                ax.yaxis.set_minor_locator(AutoMinorLocator(2))  # Add minor ticks
+                for ax in (self.ax1, self.ax2, self.ax3, self.ax4):
+                    ax.relim()
+                    ax.autoscale_view()
+                    ax.set_ylim(bottom=0)
+                    ax.grid(True, which='both', linestyle='--', alpha=0.7)
+                    ax.yaxis.set_minor_locator(AutoMinorLocator(2))  # Add minor ticks
 
-            self.ax1.set_ylabel('Throttle Value')
-            self.ax1.set_ylim(0, 2050)
-            
-            # Set RPM y-axis limit with some headroom
-            rpm_limit = max(1000, int(self.max_rpm_overall * 1.1))  # At least 1000, or 10% above max observed RPM
-            self.ax2.set_ylim(0, rpm_limit)
-            self.ax2.set_ylabel('RPM')
+                self.ax1.set_ylabel('Throttle Value')
+                self.ax1.set_ylim(0, 2050)
+                
+                # Set RPM y-axis limit with some headroom
+                rpm_limit = max(1000, int(self.max_rpm_overall * 1.1))  # At least 1000, or 10% above max observed RPM
+                self.ax2.set_ylim(0, rpm_limit)
+                self.ax2.set_ylabel('RPM')
 
 
-            self.ax3.set_ylabel('Battery Voltage (V)')
-            self.ax3.set_ylim(bottom=0)  # Set the bottom limit to 0
-            
-            self.ax4.set_ylabel('Pusher Current (mA)')
-            self.ax4.set_ylim(bottom=0)  # Set the bottom limit to 0
+                self.ax3.set_ylabel('Battery Voltage (V)')
+                self.ax3.set_ylim(bottom=0)  # Set the bottom limit to 0
+                
+                self.ax4.set_ylabel('Pusher Current (mA)')
+                self.ax4.set_ylim(bottom=0)  # Set the bottom limit to 0
 
-            self.ax4.set_xlabel('Time (ms)')
-            
-            # Update legend positions
-            self.ax1.legend(loc='lower right')
-            self.ax2.legend(loc='lower right')
+                self.ax4.set_xlabel('Time (ms)')
+                
+                # Update legend positions
+                self.ax1.legend(loc='lower right')
+                self.ax2.legend(loc='lower right')
 
-            # Set x-axis to exactly fit the data
-            if x:
-                self.ax1.set_xlim(0, max(x))
+                # Set x-axis to exactly fit the data
+                if x:
+                    self.ax1.set_xlim(0, max(x))
 
-            if self.min_max_text:
-                self.min_max_text.remove()
-            
-            # Check if voltage values are available before formatting
-            voltage_text = ""
-            if self.start_voltage is not None and self.min_voltage is not None and self.end_voltage is not None:
-                voltage_text = f"Voltage: Start {self.start_voltage:.2f}V, Min {self.min_voltage:.2f}V, End {self.end_voltage:.2f}V\n"
-            
-            
-            # Check if voltage values are available before formatting
-            voltage_text = ""
-            if self.start_voltage is not None and self.min_voltage is not None and self.end_voltage is not None:
-                voltage_text = f"Voltage: Start {self.start_voltage:.2f}V, Min {self.min_voltage:.2f}V, End {self.end_voltage:.2f}V\n"
-            
-            self.min_max_text = self.fig.text(0.02, 0.98, 
-                voltage_text +
-                voltage_text +
-                f"Min Throttle: " + ", ".join(f"{t:.0f}" for t in self.min_throttles) + "\n"
-                f"Max Throttle: " + ", ".join(f"{t:.0f}" for t in self.max_throttles) + "\n"
-                f"Max RPM: " + ", ".join(f"{rpm:.0f}" for rpm in self.max_rpms),
-                verticalalignment='top', horizontalalignment='left',
-                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+                if self.min_max_text:
+                    self.min_max_text.remove()
+                
+                # Check if voltage values are available before formatting
+                voltage_text = ""
+                if self.start_voltage is not None and self.min_voltage is not None and self.end_voltage is not None:
+                    voltage_text = f"Voltage: Start {self.start_voltage:.2f}V, Min {self.min_voltage:.2f}V, End {self.end_voltage:.2f}V\n"
+                
+                
+                # Check if voltage values are available before formatting
+                voltage_text = ""
+                if self.start_voltage is not None and self.min_voltage is not None and self.end_voltage is not None:
+                    voltage_text = f"Voltage: Start {self.start_voltage:.2f}V, Min {self.min_voltage:.2f}V, End {self.end_voltage:.2f}V\n"
+                
+                self.min_max_text = self.fig.text(0.02, 0.98, 
+                    voltage_text +
+                    voltage_text +
+                    f"Min Throttle: " + ", ".join(f"{t:.0f}" for t in self.min_throttles) + "\n"
+                    f"Max Throttle: " + ", ".join(f"{t:.0f}" for t in self.max_throttles) + "\n"
+                    f"Max RPM: " + ", ".join(f"{rpm:.0f}" for rpm in self.max_rpms),
+                    verticalalignment='top', horizontalalignment='left',
+                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
-            if pusher_current:
                 max_current = max(pusher_current)
                 self.ax4.set_ylim(0, max_current * 1.1)  # Add 10% headroom
 
-        self.save_plot_as_png()
-        return self.lines + [self.min_max_text]
+            self.save_plot_as_png()
+            self.update_flag = False
+            return self.lines + [self.min_max_text]
+
 
     def save_plot_as_png(self):
         if not hasattr(self, 'png_file'):
