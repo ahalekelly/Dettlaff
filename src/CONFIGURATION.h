@@ -16,6 +16,7 @@ bool brushedFlywheels = false; // solder a brushed motor flywheel cage to the ES
 
 // Closed Loop Settings
 flywheelControlType_t flywheelControl = TWO_LEVEL_CONTROL; // OPEN_LOOP_CONTROL or TWO_LEVEL_CONTROL
+const bool motors[4] = {true, true, false, false}; // which motors are hooked up
 bool timeOverrideWhenIdling = true; // while idling, fire the pusher after firingDelay_ms even before the flywheels are up to speed
 int32_t fullThrottleRpmTolerance = 2000; // if rpm is more than this amount below target rpm, send full throttle. too high and rpm will undershoot, too low and it will overshoot
 int32_t firingRPMTolerance = 10000; // fire pusher when all flywheels are within this amount of target rpm. higher values will mean less pusher delay but potentially fire too early
@@ -85,7 +86,6 @@ bool pusherBrakeOnDwell = false; // if true then the pusher brakes during its dw
 
 // Advanced Settings
 uint16_t pusherStallTime_ms = 750; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?
-const bool motors[4] = {true, true, false, false}; // which motors are hooked up
 bool revSwitchNormallyClosed = false; // invert switch signal?
 bool triggerSwitchNormallyClosed = false;
 bool cycleSwitchNormallyClosed = false;
