@@ -15,8 +15,8 @@ dshot_mode_t dshotMode = DSHOT300; // Options are DSHOT150, DSHOT300, DSHOT600, 
 bool brushedFlywheels = false; // solder a brushed motor flywheel cage to the ESC+ and Brushed Motor - pads
 
 // Closed Loop Settings
-flywheelControlType_t flywheelControl = TWO_LEVEL_CONTROL; // OPEN_LOOP_CONTROL or TWO_LEVEL_CONTROL
-const bool motors[4] = {true, true, false, false}; // which motors are hooked up
+flywheelControlType_t flywheelControl = OPEN_LOOP_CONTROL; // OPEN_LOOP_CONTROL or TWO_LEVEL_CONTROL
+const bool motors[4] = {true, true, true, true}; // which motors are hooked up
 bool timeOverrideWhenIdling = true; // while idling, fire the pusher after firingDelay_ms even before the flywheels are up to speed
 int32_t fullThrottleRpmTolerance = 2000; // if rpm is more than this amount below target rpm, send full throttle. too high and rpm will undershoot, too low and it will overshoot
 int32_t firingRPMTolerance = 10000; // fire pusher when all flywheels are within this amount of target rpm. higher values will mean less pusher delay but potentially fire too early
