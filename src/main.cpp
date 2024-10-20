@@ -131,7 +131,7 @@ void setup()
     }
     if (cycleSwitchPin) {
         cycleSwitch.attach(cycleSwitchPin, INPUT_PULLUP);
-        cycleSwitch.interval(debounceTime_ms);
+        cycleSwitch.interval(pusherDebounceTime_ms);
         cycleSwitch.setPressedState(cycleSwitchNormallyClosed);
     }
     if (selectFireType != NO_SELECT_FIRE) {
@@ -245,7 +245,7 @@ void loop()
         if (bufferMode == 0) {
             shotsToFire = burstLength;
         } else if (bufferMode == 1) {
-            if (shotsToFire < burstLength) {
+            if (shotsToFire < burstLength || shotsToFire == 1) {
                 shotsToFire += burstLength;
             }
         } else if (bufferMode == 2) {
