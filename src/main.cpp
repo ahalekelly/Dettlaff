@@ -242,6 +242,11 @@ void loop()
     //    Serial.println(telemBuffer);
 
     if (triggerSwitch.pressed()) { // pressed and released are transitions, isPressed is for state
+        Serial.print(time_ms);
+        Serial.print(" trigger pressed, bufferMode ");
+        Serial.print(bufferMode);
+        Serial.print(" shotsToFire before ");
+        Serial.print(shotsToFire);
         if (bufferMode == 0) {
             shotsToFire = burstLength;
         } else if (bufferMode == 1) {
@@ -251,6 +256,8 @@ void loop()
         } else if (bufferMode == 2) {
             shotsToFire += burstLength;
         }
+        Serial.print(" after ");
+        Serial.println(shotsToFire);
     } else if (triggerSwitch.released()) {
         if (bufferMode == 0) {
             shotsToFire = 1;
@@ -316,7 +323,8 @@ void loop()
             && time_ms > lastRevTime_ms + (fromIdle ? firingDelayIdleSet_ms[fpsMode] : firingDelaySet_ms[fpsMode])) {
                 flywheelState = STATE_FULLSPEED;
                 fromIdle = true;
-                Serial.println("STATE_FULLSPEED transition 2");
+                Serial.print(time_ms);
+                Serial.println(" STATE_FULLSPEED transition, firingDelay time elapsed");
         }
         break;
         // clang-format on
@@ -335,13 +343,20 @@ void loop()
                     pusher->drive(100.0 * pusherVoltage_mv / batteryVoltage_mv, pusherReverseDirection); // drive function clamps the input so it's ok if it's over 100
                     firing = true;
                     pusherTimer_ms = time_ms;
+                    Serial.print(time_ms);
+                    Serial.println(" pusher stroke starting");
                 } else if (firing && cycleSwitch.pressed()) { // when the pusher reaches rear position
                     shotsToFire = shotsToFire - 1;
+                    Serial.print(time_ms);
+                    Serial.print(" pusher reached rear, shotsToFire reduced by 1, now ");
+                    Serial.println(shotsToFire);
                     pusherTimer_ms = time_ms;
                     if (shotsToFire <= 0) { // brake pusher
                         if (pusherReversePolarityDuration_ms > 0) {
                             pusher->drive(100.0 * pusherReverseBrakingVoltage_mv / batteryVoltage_mv, !pusherReverseDirection); // drive motor backwards to stop faster
                             reverseBraking = true;
+                            Serial.print(time_ms);
+                            Serial.println(" reverse braking started");
                             //                  firing = false; this doesn't work because this pusher control routine only runs when the flywheels are running, so this causes reverse braking to never end. refactor later?
                         } else {
                             pusher->brake();
@@ -357,13 +372,20 @@ void loop()
                         }
                         pusherDwelling = true;
                     }
-                } else if (pusherDwelling) {
+                } else if (pusherDwelling) { // dwelling to reduce rate of fire
                     if (time_ms - pusherTimer_ms > pusherDwellTime_ms) { // if we've coasted the pusher for long enough
-                        pusher->drive(100.0 * pusherVoltage_mv / batteryVoltage_mv, pusherReverseDirection);
+                        pusher->drive(100.0 * pusherVoltage_mv / batteryVoltage_mv, pusherReverseDirection); // resume pushing
                         pusherDwelling = false;
                     }
                 } else if (reverseBraking) { // if we're currently doing reverse braking
-                    if (cycleSwitch.released() && pusherEndReverseBrakingEarly) {
+                    if (shotsToFire >= 1) { // stop reverse braking and resume firing
+                        pusher->drive(100.0 * pusherVoltage_mv / batteryVoltage_mv, pusherReverseDirection); // drive function clamps the input so it's ok if it's over 100
+                        firing = true;
+                        pusherTimer_ms = time_ms;
+                        reverseBraking = false;
+                        Serial.print(time_ms);
+                        Serial.println(" ending reverse braking, resuming firing");
+                    } else if (cycleSwitch.released() && pusherEndReverseBrakingEarly) {
                         Serial.println("Cycle switch released during reverse braking");
                         pusher->brake();
                         reverseBraking = false;
@@ -378,12 +400,14 @@ void loop()
                         flywheelState = STATE_IDLE; // check later
                         Serial.println("state transition: FULLSPEED to IDLE 4");
                     } else if (time_ms > pusherTimer_ms + pusherReversePolarityDuration_ms) {
-                        Serial.println("pusherReverse end of duration");
+                        Serial.print(time_ms);
+                        Serial.println(" pusherReverse end of duration");
                         pusher->brake();
                         reverseBraking = false;
                         firing = false;
                         flywheelState = STATE_IDLE; // check later
-                        Serial.println("state transition: FULLSPEED to IDLE 5");
+                        Serial.print(time_ms);
+                        Serial.println(" state transition: FULLSPEED to IDLE 5");
                     }
                 } else if (!firing && cycleSwitch.released() && pusherReverseOnOverrun) {
                     Serial.println("pusherReverseOnOverrun");
