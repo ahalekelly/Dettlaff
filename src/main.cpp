@@ -457,7 +457,7 @@ void loop()
 
     if (wifiState == false) {
         pusherShunt_mv = pusherShuntADC.readMiliVolts();
-        pusherCurrent_ma = pusherShunt_mv * 3070 / 1000;
+        pusherCurrent_ma = pusherShunt_mv * 3070 / 1000 - 392; // 3070 current reduction factor for IPROPI, 1k shunt resistor, and the datasheet says the zero offset should be 15mA but experimentally it's 392mA
         pusherCurrentSmoothed_ma = (pusherCurrent_ma * (100 - pusherCurrentSmoothingFactor) + pusherCurrentSmoothed_ma * pusherCurrentSmoothingFactor) / 100;
     }
 
