@@ -36,7 +36,6 @@ bool reverseBraking = false;
 bool pusherDwelling = false;
 uint32_t batteryADC_mv = 0;
 int32_t batteryVoltage_mv = 14800;
-const int voltageAveragingWindow = 5;
 int32_t voltageBuffer[voltageAveragingWindow] = { 0 };
 int voltageBufferIndex = 0;
 int32_t pusherShunt_mv = 0;
@@ -447,14 +446,17 @@ void loop()
         break;
     }
     batteryADC_mv = batteryADC.readMiliVolts();
-    voltageBuffer[voltageBufferIndex] = voltageCalibrationFactor * batteryADC_mv * 11;
-    voltageBufferIndex = (voltageBufferIndex + 1) % voltageAveragingWindow;
-    batteryVoltage_mv = 0;
-    for (int i = 0; i < voltageAveragingWindow; i++) {
-        batteryVoltage_mv += voltageBuffer[i];
+    if (voltageAveragingWindow == 1) {
+        batteryVoltage_mv = voltageCalibrationFactor * batteryADC_mv * 11;
+    } else {
+        voltageBuffer[voltageBufferIndex] = voltageCalibrationFactor * batteryADC_mv * 11;
+        voltageBufferIndex = (voltageBufferIndex + 1) % voltageAveragingWindow;
+        batteryVoltage_mv = 0;
+        for (int i = 0; i < voltageAveragingWindow; i++) {
+            batteryVoltage_mv += voltageBuffer[i];
+        }
+        batteryVoltage_mv /= voltageAveragingWindow; // apply exponential moving average to smooth out noise. Time constant ≈ 1.44 ms
     }
-    batteryVoltage_mv /= voltageAveragingWindow; // apply exponential moving average to smooth out noise. Time constant ≈ 1.44 ms
-
     if (wifiState == false) {
         pusherShunt_mv = pusherShuntADC.readMiliVolts();
         pusherCurrent_ma = pusherShunt_mv * 3070 / 1000 - 392; // 3070 current reduction factor for IPROPI, 1k shunt resistor, and the datasheet says the zero offset should be 15mA but experimentally it's 392mA
