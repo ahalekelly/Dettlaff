@@ -33,6 +33,12 @@ enum flywheelControlType_t {
     PID_CONTROL
 };
 
+enum burstFireType_t {
+    AUTO,
+    BURST,
+    BINARY
+};
+
 typedef struct {
     pusherDriverType_t pusherDriverType;
     bool pusherCoastHigh;
