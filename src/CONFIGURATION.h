@@ -5,12 +5,13 @@
 // If variableFPS is true, the following settings are set on boot and locked. Otherwise, it always uses the first mode
 bool variableFPS = true;
 int32_t revRPMset[3][4] = { { 40000, 40000, 40000, 40000 }, { 25000, 25000, 25000, 25000 }, { 14000, 14000, 14000, 14000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and the 4 elements in each group are individual motor RPM
-uint32_t idleTimeSet_ms[3] = { 30000, 30000, 30000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds
+uint32_t idleTimeSet_ms[3] = { 30000, 5000, 2000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds
 uint32_t firingDelaySet_ms[3] = { 150, 125, 100 }; // delay to allow flywheels to spin up before firing dart
-uint32_t firingDelayIdleSet_ms[3] = { 25, 0, 0 }; // delay to allow flywheels to spin up before firing dart when starting from idle state
+uint32_t firingDelayIdleSet_ms[3] = { 125, 100, 80 }; // delay to allow flywheels to spin up before firing dart when starting from idle state
+uint32_t spindownSpeed = 50; // RPM per ms
 
 int32_t motorKv = 3200; // critical for closed loop
-int32_t idleRPM[4] = { 1000, 1000, 1000, 1000 }; // rpm for flywheel idling, set this as low as possible where the wheels still spin reliably
+int32_t idleRPM[4] = { 500, 500, 500, 500 }; // rpm for flywheel idling, set this as low as possible where the wheels still spin reliably
 dshot_mode_t dshotMode = DSHOT300; // Options are DSHOT150, DSHOT300, DSHOT600, or DSHOT_OFF. DSHOT300 is recommended, DSHOT150 does not work with either AM32 ESCs or closed loop control, and DSHOT600 seems less reliable. DSHOT_OFF falls back to servo PWM. PWM is not working, probably a ESP32 timer resource conflict with the pusher PWM circuit
 bool brushedFlywheels = false; // solder a brushed motor flywheel cage to the ESC+ and Brushed Motor - pads
 
@@ -24,7 +25,7 @@ int32_t minFiringDelaySet_ms[3] = {0, 0, 0}; // when not idling, don't fire the 
 int32_t minFiringDelayIdleSet_ms[3] = {0, 0, 0}; // same but when idling
 
 // Select Fire Settings
-uint32_t burstLengthSet[3] = { 500, 2, 1 };
+uint32_t burstLengthSet[3] = { 100, 3, 1 };
 uint32_t bufferModeSet[3] = { 0, 1, 1 };
 // 0 = stop firing when trigger is released
 // 1 = complete current burst when trigger is released
@@ -40,7 +41,7 @@ uint8_t defaultFiringMode = 1; // only for SWITCH_SELECT_FIRE, what mode to sele
 char wifiSsid[32] = "network name";
 char wifiPass[63] = "password";
 uint32_t wifiDuration_ms = 10 * 60 * 1000; // how long before wifi turns off to save power. default is 10 min
-bool printTelemetry = true; // output telemetry over USB serial port for tuning
+bool printTelemetry = false; // output telemetry over USB serial port for tuning. Enabling this turns on bidirectional dshot
 uint32_t lowVoltageCutoff_mv = 2500 * 4; // default is 2.5V per cell * 4 cells because the ESP32 voltage measurement is not very accurate
 // to protect your batteries, i reccomend doing the calibration below and then setting the cutoff to 3.2V to 3.4V per cell
 float voltageCalibrationFactor = 1.0; // measure the battery voltage with a multimeter and divide that by the "Battery voltage before calibration" printed in the Serial Monitor, then put the result here

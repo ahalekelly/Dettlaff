@@ -19,8 +19,7 @@ uint32_t lastRevTime_ms = 0; // for calculating idling
 uint32_t pusherTimer_ms = 0;
 int32_t revRPM[4]; // stores value from revRPMSet on boot for current firing mode
 int32_t idleTime_ms; // stores value from idleTimeSet_ms on boot for current firing mode
-int32_t zeroRPM[4] = { 0, 0, 0, 0 };
-int32_t (*targetRPM)[4]; // a pointer to a int32_t[4] array. always points to either revRPM, idleRPM, or zeroRPM
+int32_t targetRPM[4] = { 0, 0, 0, 0 }; // stores current target rpm
 int32_t firingRPM[4];
 int32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
 uint16_t burstLength; // stores value from burstLengthSet for current firing mode
@@ -98,7 +97,7 @@ void setup()
         Serial.println(voltageCalibrationFactor * batteryADC_mv * 11);
     }
 
-    if (flywheelControl != OPEN_LOOP_CONTROL) {
+    if (flywheelControl != OPEN_LOOP_CONTROL || printTelemetry) {
         dshotBidirectional = ENABLE_BIDIRECTION;
     }
 
@@ -271,13 +270,21 @@ void loop()
 
         if (triggerSwitch.pressed() || revSwitch.isPressed()) {
             triggerTime_us = loopStartTimer_us;
-            targetRPM = &revRPM;
+            memcpy(targetRPM, revRPM, sizeof(targetRPM)); // Copy revRPM to targetRPM
             lastRevTime_ms = time_ms;
             flywheelState = STATE_ACCELERATING;
         } else if (time_ms < lastRevTime_ms + idleTime_ms && lastRevTime_ms > 0) { // idle flywheels
-            targetRPM = &idleRPM;
+            for (int i = 0; i < 4; i++) {
+                if (motors[i]) {
+                    targetRPM[i] = max(targetRPM[i] - static_cast<int32_t>((spindownSpeed * loopTime_us) / 1000), idleRPM[i]);
+                }
+            }
         } else { // stop flywheels
-            targetRPM = &zeroRPM;
+            for (int i = 0; i < 4; i++) {
+                if (motors[i] && targetRPM[i] != 0) {
+                    targetRPM[i] = max(targetRPM[i] - static_cast<int32_t>((spindownSpeed * loopTime_us) / 1000), 0);
+                }
+            }
             PIDIntegral = 0;
             fromIdle = false;
         }
@@ -319,6 +326,7 @@ void loop()
             flywheelState = STATE_IDLE;
             Serial.println("state transition: FULLSPEED to IDLE 1");
         } else if (shotsToFire > 0 || firing) {
+            lastRevTime_ms = time_ms;
             switch (pusherType) {
 
             case PUSHER_MOTOR_CLOSEDLOOP:
@@ -427,7 +435,7 @@ void loop()
     case PID_CONTROL:
         for (int i = 0; i < 4; i++) {
             if (motors[i]) {
-                PIDError[i] = (*targetRPM)[i] - motorRPM[i];
+                PIDError[i] = targetRPM[i] - motorRPM[i];
 
                 PIDOutput[i] = KP * PIDError[i] + KI * (PIDIntegral + PIDError[i] * loopTime_us / 1000000) + KD * (PIDError[i] - PIDErrorPrior[i]) / loopTime_us * 1000000;
                 closedLoopRPM[i] = PIDOutput[i] + motorRPM[i];
@@ -448,13 +456,10 @@ void loop()
     case TWO_LEVEL_CONTROL:
         for (int i = 0; i < 4; i++) {
             if (motors[i]) {
-                if (targetRPM == &revRPM && motorRPM[i] < fullThrottleRpmThreshold[i]) {
+                if (targetRPM[i] == revRPM[i] && motorRPM[i] < fullThrottleRpmThreshold[i]) {
                     throttleValue[i] = maxThrottle;
-                } else if (throttleValue[i] == 0 || targetRPM == &revRPM) {
-                    throttleValue[i] = min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv);
                 } else {
-                    throttleValue[i] = max(min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv),
-                        throttleValue[i] - 1);
+                    throttleValue[i] = max(min(maxThrottle, maxThrottle * targetRPM[i] / batteryVoltage_mv * 1000 / motorKv), 0);
                 }
             }
         }
@@ -463,12 +468,7 @@ void loop()
     case OPEN_LOOP_CONTROL:
         for (int i = 0; i < 4; i++) {
             if (motors[i]) {
-                if (throttleValue[i] == 0) {
-                    throttleValue[i] = min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv);
-                } else {
-                    throttleValue[i] = max(min(maxThrottle, maxThrottle * (*targetRPM)[i] / batteryVoltage_mv * 1000 / motorKv),
-                        throttleValue[i] - 1);
-                }
+                throttleValue[i] = max(min(maxThrottle, maxThrottle * targetRPM[i] / batteryVoltage_mv * 1000 / motorKv), 0);
             }
         }
         break;
@@ -476,7 +476,7 @@ void loop()
 
     // send signal to ESCs
     if (brushedFlywheels) {
-        if ((*targetRPM)[0] > 0) {
+        if (targetRPM[0] > 0) {
             digitalWrite(board.flywheel, HIGH);
         } else {
             digitalWrite(board.flywheel, LOW);
@@ -486,7 +486,7 @@ void loop()
             if (motors[i]) {
                 servo[i].writeMicroseconds(throttleValue[i] / 2 + 1000);
                 /*
-                Serial.print((*targetRPM)[i]);
+                Serial.print(targetRPM[i]);
                 Serial.print(" ");
                 Serial.print(throttleValue[i] / 2 + 1000);
                 Serial.print(" ");
@@ -517,15 +517,18 @@ void loop()
         }
 
         // Telemetry logging for use with dyno python script
-        if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && triggerTime_us != 0) {
-            if (loopStartTimer_us - triggerTime_us < 250000) {
-                Serial.print((loopStartTimer_us - triggerTime_us) / 1000);
+        if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && lastRevTime_ms != 0) {
+            if (loopStartTimer_us / 1000 - lastRevTime_ms < 250) {
+                Serial.print((loopStartTimer_us - triggerTime_us) / 1000); // time since trigger pull
+                // Serial.print(loopStartTimer_us / 1000); // time since boot
                 Serial.print(",");
                 Serial.print(batteryADC_mv * 11);
                 Serial.print(",");
                 Serial.print(pusherCurrent_ma);
                 for (int i = 0; i < 4; i++) {
                     if (motors[i]) {
+                        Serial.print(",");
+                        Serial.print(targetRPM[i]);
                         Serial.print(",");
                         Serial.print(throttleValue[i]);
                         Serial.print(",");

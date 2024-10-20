@@ -6,3 +6,4 @@ arduino_secrets.h
 dyno/venv
 dyno/*.log
 dyno/*.png
+*.csv
