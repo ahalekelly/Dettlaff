@@ -558,8 +558,6 @@ void loop()
                 for (int i = 0; i < 4; i++) {
                     if (motors[i]) {
                         Serial.print(",");
-                        Serial.print(targetRPM[i]);
-                        Serial.print(",");
                         Serial.print(throttleValue[i]);
                         Serial.print(",");
                         Serial.print(motorRPM[i]);
