@@ -25,14 +25,18 @@ int32_t minFiringDelaySet_ms[3] = {0, 0, 0}; // when not idling, don't fire the 
 int32_t minFiringDelayIdleSet_ms[3] = {0, 0, 0}; // same but when idling
 
 // Select Fire Settings
-uint32_t burstLengthSet[3] = { 100, 3, 1 };
-uint32_t bufferModeSet[3] = { 0, 1, 1 };
-// 0 = stop firing when trigger is released
-// 1 = complete current burst when trigger is released
-// 2 = fire as many bursts as trigger pulls
-// for full auto, set burstLength high (50+) and bufferMode = 0
-// for semi auto, set burstLength to 1 and bufferMode to 1 or 2
-// i find the most useful mode is full auto with a 5 dart limit (bufferMode 0, burstLength 5)
+uint32_t burstLengthSet[3] = { 100, 5, 1 };
+burstFireType_t burstModeSet[3] = { AUTO, AUTO, BURST };
+// burstMode AUTO = stops firing when trigger is released
+// burstMode BURST = always completes the burst
+// burstMode BINARY = fires one burst when you pull the trigger and another when you release the trigger
+// for full auto, set burstLength high (50+) and burstMode to AUTO
+// for semi auto, set burstLength to 1 and burstMode to BURST
+// for burst fire, set burstLength and burstMode to BURST
+// i find a very useful mode is full auto with a 5 dart limit (burstMode AUTO, burstLength 5)
+
+uint32_t binaryTriggerTimeout_ms = 2000; // if you hold the trigger for more than this amount of time, releasing the trigger will not fire a burst
+
 
 selectFireType_t selectFireType = SWITCH_SELECT_FIRE; // pick NO_SELECT_FIRE, SWITCH_SELECT_FIRE, or BUTTON_SELECT_FIRE
 uint8_t defaultFiringMode = 1; // only for SWITCH_SELECT_FIRE, what mode to select if no pins are connected

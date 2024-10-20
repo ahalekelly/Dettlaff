@@ -23,8 +23,8 @@ int32_t targetRPM[4] = { 0, 0, 0, 0 }; // stores current target rpm
 int32_t firingRPM[4];
 int32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
 uint16_t burstLength; // stores value from burstLengthSet for current firing mode
-uint8_t bufferMode; // stores value from bufferModeSet for current firing mode
-int8_t firingMode = 0; // stores value from firingModeSet for current firing mode
+burstFireType_t burstMode; // stores value from burstModeSet for current firing mode
+int8_t firingMode = 0; // current firing mode
 int8_t fpsMode = 0; // copy of firingMode locked at boot
 bool fromIdle;
 bidirectional_mode_e dshotBidirectional = NO_BIDIRECTION;
@@ -49,7 +49,8 @@ Driver* pusher;
 bool wifiState = false;
 // String telemBuffer = "";
 int8_t telemMotorNum = -1; // 0-3
-uint32_t triggerTime_us = 0;
+uint32_t revStartTime_us = 0;
+uint32_t triggerTime_ms = 0;
 int32_t tempRPM;
 ESP32AnalogRead batteryADC;
 ESP32AnalogRead pusherShuntADC;
@@ -231,7 +232,7 @@ void loop()
     updateFiringMode();
     // changes burst options
     burstLength = burstLengthSet[firingMode];
-    bufferMode = bufferModeSet[firingMode];
+    burstMode = burstModeSet[firingMode];
 
     // Transfer data from telemetry serial port to telemetry serial buffer:
     // while (Serial2.available()) {
@@ -241,25 +242,28 @@ void loop()
     // will we be able to detect the gaps between packets to know when a packet is complete? Need to test and see
     //    Serial.println(telemBuffer);
 
-    if (triggerSwitch.pressed()) { // pressed and released are transitions, isPressed is for state
+    if (triggerSwitch.pressed() || (burstMode == BINARY && triggerSwitch.released() && time_ms < triggerTime_ms + binaryTriggerTimeout_ms)) { // pressed and released are transitions, isPressed is for state
         Serial.print(time_ms);
-        Serial.print(" trigger pressed, bufferMode ");
-        Serial.print(bufferMode);
+        if (triggerSwitch.pressed()) {
+            Serial.print(" trigger pressed, burstMode ");
+        } else if (burstMode == BINARY && triggerSwitch.released() && time_ms < triggerTime_ms + binaryTriggerTimeout_ms) {
+            Serial.print(" binary trigger released, burstMode ");
+        }
+        triggerTime_ms = time_ms;
+        Serial.print(burstMode);
         Serial.print(" shotsToFire before ");
         Serial.print(shotsToFire);
-        if (bufferMode == 0) {
+        if (burstMode == AUTO) {
             shotsToFire = burstLength;
-        } else if (bufferMode == 1) {
+        } else {
             if (shotsToFire < burstLength || shotsToFire == 1) {
                 shotsToFire += burstLength;
             }
-        } else if (bufferMode == 2) {
-            shotsToFire += burstLength;
         }
         Serial.print(" after ");
         Serial.println(shotsToFire);
     } else if (triggerSwitch.released()) {
-        if (bufferMode == 0) {
+        if (burstMode == AUTO && shotsToFire > 1) {
             shotsToFire = 1;
         }
     }
@@ -275,8 +279,8 @@ void loop()
             esp_deep_sleep_start(); // go to sleep and never wake up
         }
 
-        if (triggerSwitch.pressed() || revSwitch.isPressed()) {
-            triggerTime_us = loopStartTimer_us;
+        if (shotsToFire > 0 || revSwitch.isPressed()) {
+            revStartTime_us = loopStartTimer_us;
             memcpy(targetRPM, revRPM, sizeof(targetRPM)); // Copy revRPM to targetRPM
             lastRevTime_ms = time_ms;
             flywheelState = STATE_ACCELERATING;
@@ -346,7 +350,7 @@ void loop()
                     Serial.print(time_ms);
                     Serial.println(" pusher stroke starting");
                 } else if (firing && cycleSwitch.pressed()) { // when the pusher reaches rear position
-                    shotsToFire = shotsToFire - 1;
+                    shotsToFire = max(0, shotsToFire - 1);
                     Serial.print(time_ms);
                     Serial.print(" pusher reached rear, shotsToFire reduced by 1, now ");
                     Serial.println(shotsToFire);
@@ -426,7 +430,7 @@ void loop()
                 if (shotsToFire > 0 && !firing && time_ms > pusherTimer_ms + solenoidRetractTime_ms) { // extend solenoid
                     pusher->drive(100, pusherReverseDirection);
                     firing = true;
-                    shotsToFire -= 1;
+                    shotsToFire = max(0, shotsToFire - 1);
                     pusherTimer_ms = time_ms;
                     Serial.println("solenoid extending");
                 } else if (firing && time_ms > pusherTimer_ms + solenoidExtendTime_ms) { // retract solenoid
@@ -545,7 +549,7 @@ void loop()
         // Telemetry logging for use with dyno python script
         if (printTelemetry && dshotBidirectional == ENABLE_BIDIRECTION && lastRevTime_ms != 0) {
             if (loopStartTimer_us / 1000 - lastRevTime_ms < 250) {
-                Serial.print((loopStartTimer_us - triggerTime_us) / 1000); // time since trigger pull
+                Serial.print((loopStartTimer_us - revStartTime_us) / 1000); // time since trigger pull
                 // Serial.print(loopStartTimer_us / 1000); // time since boot
                 Serial.print(",");
                 Serial.print(batteryADC_mv * 11);
