@@ -8,7 +8,7 @@ int32_t revRPMset[3][4] = { { 40000, 40000, 40000, 40000 }, { 25000, 25000, 2500
 uint32_t idleTimeSet_ms[3] = { 30000, 5000, 2000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds
 uint32_t firingDelaySet_ms[3] = { 150, 125, 100 }; // delay to allow flywheels to spin up before firing dart
 uint32_t firingDelayIdleSet_ms[3] = { 125, 100, 80 }; // delay to allow flywheels to spin up before firing dart when starting from idle state
-uint32_t spindownSpeed = 50; // RPM per ms
+uint32_t spindownSpeed = 30; // RPM per ms
 
 int32_t motorKv = 3200; // critical for closed loop
 int32_t idleRPM[4] = { 500, 500, 500, 500 }; // rpm for flywheel idling, set this as low as possible where the wheels still spin reliably
@@ -38,9 +38,6 @@ selectFireType_t selectFireType = SWITCH_SELECT_FIRE; // pick NO_SELECT_FIRE, SW
 uint8_t defaultFiringMode = 1; // only for SWITCH_SELECT_FIRE, what mode to select if no pins are connected
 
 // Dettlaff Settings
-char wifiSsid[32] = "network name";
-char wifiPass[63] = "password";
-uint32_t wifiDuration_ms = 10 * 60 * 1000; // how long before wifi turns off to save power. default is 10 min
 bool printTelemetry = false; // output telemetry over USB serial port for tuning. Enabling this turns on bidirectional dshot
 uint32_t lowVoltageCutoff_mv = 2500 * 4; // default is 2.5V per cell * 4 cells because the ESP32 voltage measurement is not very accurate
 // to protect your batteries, i reccomend doing the calibration below and then setting the cutoff to 3.2V to 3.4V per cell
@@ -87,17 +84,22 @@ uint8_t pusherReversePolarityDuration_ms = 5; // try increasing this if your pus
 uint32_t pusherDwellTime_ms = 0; // dwell for this long at the end of each pusher cycle in full auto / burst mode to slow down rate of fire and allow mag to push the next dart. doesn't dwell if it's the last shot
 bool pusherBrakeOnDwell = false; // if true then the pusher brakes during its dwell time, if false it coasts
 
+// Wi-Fi Settings
+uint32_t wifiDuration_ms = 10 * 60 * 1000; // how long before wifi turns off to save power. default is 10 min. set to 0 to disable wifi
+char wifiSsid[32] = ""; // Name and password of your home wifi network. If this is left empty, Dettlaff will always create its own wifi network that you can connect to and upload code. Some people have experienced issues when Dettlaff is configured to connect to their home wifi
+char wifiPass[63] = "";
+char AP_SSID[32] = "Dettlaff"; // name and password for the wifi network created by Dettlaff
+char AP_PW[32] = "Kellytime";
+
 // Advanced Settings
 uint16_t pusherStallTime_ms = 750; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?
 bool revSwitchNormallyClosed = false; // invert switch signal?
 bool triggerSwitchNormallyClosed = false;
 bool cycleSwitchNormallyClosed = false;
-uint16_t debounceTime_ms = 100;
+uint16_t debounceTime_ms = 100; // decrease if you're unable to make fast double taps in semi auto, increase if you're getting accidental double taps in semi auto
 uint16_t pusherDebounceTime_ms = 25;
 uint32_t voltageSmoothingFactor = 50; // from 0 to 99, how much averaging to apply to the battery voltage reading (exponential moving average)
 uint32_t pusherCurrentSmoothingFactor = 90;
-char AP_SSID[32] = "Dettlaff";
-char AP_PW[32] = "KellyIndu";
 uint16_t targetLoopTime_us = 1000; // microseconds
 float maxDutyCycle_pct = 98;
 uint8_t deadtime = 10;

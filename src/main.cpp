@@ -212,10 +212,10 @@ void setup()
 
     batteryADC.attach(board.batteryADC);
     pusherShuntADC.attach(board.pusherShunt);
-    /**
+
     if (wifiDuration_ms > 0) {
         WiFiInit();
-    }**/
+    }
 }
 
 void loop()
@@ -427,9 +427,11 @@ void loop()
     }
     batteryVoltage_mv /= voltageAveragingWindow; // apply exponential moving average to smooth out noise. Time constant ≈ 1.44 ms
 
-    pusherShunt_mv = pusherShuntADC.readMiliVolts();
-    pusherCurrent_ma = pusherShunt_mv * 3070 / 1000;
-    pusherCurrentSmoothed_ma = (pusherCurrent_ma * (100 - pusherCurrentSmoothingFactor) + pusherCurrentSmoothed_ma * pusherCurrentSmoothingFactor) / 100;
+    if (wifiState == false) {
+        pusherShunt_mv = pusherShuntADC.readMiliVolts();
+        pusherCurrent_ma = pusherShunt_mv * 3070 / 1000;
+        pusherCurrentSmoothed_ma = (pusherCurrent_ma * (100 - pusherCurrentSmoothingFactor) + pusherCurrentSmoothed_ma * pusherCurrentSmoothingFactor) / 100;
+    }
 
     switch (flywheelControl) {
     case PID_CONTROL:
@@ -600,8 +602,9 @@ void WiFiInit()
     wifiState = true;
     WiFi.mode(WIFI_STA);
     WiFi.begin(wifiSsid, wifiPass);
-    if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-        Serial.println("WiFi Connection Failed!");
+    if (wifiSsid[0] == '\0' || WiFi.waitForConnectResult() != WL_CONNECTED) {
+        Serial.print("Creating WiFi hotspot, password is ");
+        Serial.println(AP_PW);
         WiFi.mode(WIFI_AP);
         WiFi.softAP(AP_SSID, AP_PW);
         ArduinoOTA.setHostname("Dettlaff");
