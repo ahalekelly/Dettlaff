@@ -22,6 +22,7 @@ int32_t idleTime_ms; // stores value from idleTimeSet_ms on boot for current fir
 int32_t targetRPM[4] = { 0, 0, 0, 0 }; // stores current target rpm
 int32_t firingRPM[4];
 int32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
+uint32_t currentSpindownSpeed = 0;
 uint16_t burstLength; // stores value from burstLengthSet for current firing mode
 burstFireType_t burstMode; // stores value from burstModeSet for current firing mode
 int8_t firingMode = 0; // current firing mode
@@ -283,16 +284,23 @@ void loop()
             memcpy(targetRPM, revRPM, sizeof(targetRPM)); // Copy revRPM to targetRPM
             lastRevTime_ms = time_ms;
             flywheelState = STATE_ACCELERATING;
+            currentSpindownSpeed = 0; // reset spindownSpeed
         } else if (time_ms < lastRevTime_ms + idleTime_ms && lastRevTime_ms > 0) { // idle flywheels
+            if (currentSpindownSpeed < spindownSpeed) {
+                currentSpindownSpeed += 1;
+            }
             for (int i = 0; i < 4; i++) {
                 if (motors[i]) {
-                    targetRPM[i] = max(targetRPM[i] - static_cast<int32_t>((spindownSpeed * loopTime_us) / 1000), idleRPM[i]);
+                    targetRPM[i] = max(targetRPM[i] - static_cast<int32_t>((currentSpindownSpeed * loopTime_us) / 1000), idleRPM[i]);
                 }
             }
         } else { // stop flywheels
+            if (currentSpindownSpeed < spindownSpeed) {
+                currentSpindownSpeed += 1;
+            }
             for (int i = 0; i < 4; i++) {
                 if (motors[i] && targetRPM[i] != 0) {
-                    targetRPM[i] = max(targetRPM[i] - static_cast<int32_t>((spindownSpeed * loopTime_us) / 1000), 0);
+                    targetRPM[i] = max(targetRPM[i] - static_cast<int32_t>((currentSpindownSpeed * loopTime_us) / 1000), 0);
                 }
             }
             PIDIntegral = 0;
