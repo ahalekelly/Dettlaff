@@ -181,7 +181,7 @@ void setup()
     for (int i = 0; i < 4; i++) {
         if (motors[i]) {
             revRPM[i] = revRPMset[fpsMode][i];
-            firingRPM[i] = revRPM[i] - firingRPMTolerance;
+            firingRPM[i] = max(revRPM[i] - firingRPMTolerance, minFiringRPM);
             fullThrottleRpmThreshold[i] = revRPM[i] - fullThrottleRpmTolerance;
         }
     }

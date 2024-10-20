@@ -21,6 +21,7 @@ const bool motors[4] = {true, true, true, true}; // which motors are hooked up
 bool timeOverrideWhenIdling = true; // while idling, fire the pusher after firingDelay_ms even before the flywheels are up to speed
 int32_t fullThrottleRpmTolerance = 5000; // if rpm is more than this amount below target rpm, send full throttle. too high and rpm will undershoot, too low and it will overshoot
 int32_t firingRPMTolerance = 10000; // fire pusher when all flywheels are within this amount of target rpm. higher values will mean less pusher delay but potentially fire too early
+int32_t minFiringRPM = 10000; // overrides firingRPMTolerance for low rpm settings
 int32_t minFiringDelaySet_ms[3] = {0, 0, 0}; // when not idling, don't fire the pusher before this amount of time, even if wheels are up to speed. makes the delay more consistent
 int32_t minFiringDelayIdleSet_ms[3] = {0, 0, 0}; // same but when idling
 
