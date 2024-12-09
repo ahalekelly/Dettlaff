@@ -1,0 +1,128 @@
+name: Build Dyno Executables
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'dyno/dyno.py'
+      - '.github/workflows/build_dyno.yml'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'dyno/dyno.py'
+      - '.github/workflows/build_dyno.yml'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v4
+      timeout-minutes: 5
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      timeout-minutes: 5
+      with:
+        python-version: '3.10'
+    
+    - name: Install pyinstaller
+      timeout-minutes: 10
+      run: |
+        pip install --timeout 600 -v --no-cache-dir pyinstaller==6.10.0
+
+    - name: Install pyserial
+      timeout-minutes: 10
+      run: |
+        pip install --timeout 600 -v --no-cache-dir pyserial~=3.5
+
+    - name: Install matplotlib
+      timeout-minutes: 10
+      run: |
+        pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
+    
+    - name: Ensure bin directory exists
+      shell: pwsh
+      run: New-Item -Path dyno/bin -ItemType Directory -Force
+
+    - name: Build executable
+      timeout-minutes: 10
+      shell: pwsh
+      run: |
+        pyinstaller --name dyno --onefile --distpath dyno/bin dyno/dyno.py
+    
+    - name: Handle executable
+      timeout-minutes: 5
+      shell: bash
+      run: |
+        mv dyno/bin/dyno.exe dyno/bin/dyno-windows.exe
+    
+    - name: Configure Git and Push
+      run: |
+        git config --global user.name "GitHub Actions Bot"
+        git config --global user.email "actions@github.com"
+        git pull origin master
+        git add dyno/bin/
+        git commit -m "Build Windows executable" || echo "No changes to commit"
+        git push origin HEAD:${{ github.ref }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-macos:
+    needs: build-windows
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v4
+      timeout-minutes: 5
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      timeout-minutes: 5
+      with:
+        python-version: '3.10'
+    
+    - name: Install pyinstaller
+      timeout-minutes: 10
+      run: |
+        pip install --timeout 600 -v --no-cache-dir pyinstaller~=6.11
+
+    - name: Install pyserial
+      timeout-minutes: 10
+      run: |
+        pip install --timeout 600 -v --no-cache-dir pyserial~=3.5
+
+    - name: Install matplotlib
+      timeout-minutes: 10
+      run: |
+        pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
+    
+    - name: Ensure bin directory exists
+      run: mkdir -p dyno/bin 2>/dev/null || true
+
+    - name: Build executable
+      timeout-minutes: 10
+      shell: bash
+      run: |
+        pyinstaller --name dyno \
+                    --onefile \
+                    --distpath dyno/bin \
+                    dyno/dyno.py
+    
+    - name: Handle executable
+      timeout-minutes: 5
+      shell: bash
+      run: |
+        mv dyno/bin/dyno dyno/bin/dyno-mac
+        chmod +x dyno/bin/dyno-mac
+    
+    - name: Configure Git and Push
+      run: |
+        git config --global user.name "GitHub Actions Bot"
+        git config --global user.email "actions@github.com"
+        git pull origin master
+        git add dyno/bin/
+        git commit -m "Build macOS executable" || echo "No changes to commit"
+        git push origin HEAD:${{ github.ref }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

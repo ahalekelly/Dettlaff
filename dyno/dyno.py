@@ -70,7 +70,7 @@ class DynamometerPlotter:
                 raise ValueError("No suitable serial port found.")
             print(f"Using serial port: {self.serial_port}")
             self.ser = serial.Serial(self.serial_port, BAUD_RATE, timeout=0.1)
-            self.output_file = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S") + ".log"
+            self.output_file = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".log"
             self.png_file = self.output_file.rsplit('.', 1)[0] + '.png'
             self.running = True
             self.data_thread = Thread(target=self.read_serial_data)
