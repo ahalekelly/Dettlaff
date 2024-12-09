@@ -10,8 +10,6 @@ on:
 jobs:
   build:
     timeout-minutes: 30  # Add job-level timeout
-    container:
-      options: --memory=4g
 
     strategy:
       matrix:
@@ -37,7 +35,12 @@ jobs:
     - name: Install dependencies
       timeout-minutes: 10
       run: |
-        pip install --no-cache-dir matplotlib~=3.9.3 pyserial~=3.5 pyinstaller~=6.11.0 --timeout 600 -v
+        pip install --no-cache-dir pyserial~=3.5 pyinstaller~=6.11.0 --timeout 600 -v
+
+    - name: Install matplotlib
+      timeout-minutes: 10
+      run: |
+        pip install --no-cache-dir matplotlib~=3.9.3 --timeout 600 -v
 
     - name: Build executable
       timeout-minutes: 10
