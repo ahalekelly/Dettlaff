@@ -9,6 +9,8 @@ on:
 
 jobs:
   build:
+    timeout-minutes: 30  # Add job-level timeout
+    
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
@@ -22,17 +24,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      timeout-minutes: 5
 
     - name: Set up Python
       uses: actions/setup-python@v4
+      timeout-minutes: 5
       with:
         python-version: '3.12'
 
     - name: Install dependencies
+      timeout-minutes: 10
       run: |
         pip install --no-cache-dir matplotlib==3.9.3 pyserial==3.5 pyinstaller==6.11.0
 
     - name: Build executable
+      timeout-minutes: 10
       run: |
         pyinstaller --name dyno \
                     --onedir \
@@ -40,6 +46,7 @@ jobs:
                     dyno/dyno.py
 
     - name: Handle executable
+      timeout-minutes: 5
       shell: bash
       run: |
         mkdir -p dyno
@@ -51,12 +58,14 @@ jobs:
         fi
 
     - name: Clean up build artifacts
+      timeout-minutes: 5
       run: |
         rm -rf dyno/dyno
       shell: bash
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
+      timeout-minutes: 5
       with:
         name: dyno-${{ matrix.os }}
         path: dyno/${{ matrix.output_name }}
