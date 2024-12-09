@@ -1,13 +1,15 @@
-name: Build Executables
+name: Build Dyno Executables
 on:
   push:
     branches: [ master ]
     paths:
-      - '.github/workflows/build_dyno.yml'  # Trigger on changes to this file
+      - 'dyno/dyno.py'
+      - '.github/workflows/build_dyno.yml'
   pull_request:
     branches: [ master ]
     paths:
-      - '.github/workflows/build_dyno.yml'  # Trigger on changes to this file
+      - 'dyno/dyno.py'
+      - '.github/workflows/build_dyno.yml'
   workflow_dispatch:  # Keep manual trigger option
 
 jobs:
@@ -47,14 +49,17 @@ jobs:
       run: |
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
     
+    - name: Ensure bin directory exists
+      run: mkdir -p dyno/bin
+
     - name: Build executable (MacOS)
       timeout-minutes: 10
       shell: bash
       if: matrix.os == 'macos-latest'
       run: |
         pyinstaller --name dyno \
-                    --onedir \
-                    --distpath ./dist \
+                    --onefile \
+                    --distpath dyno/bin \
                     dyno/dyno.py
     
     - name: Build executable (Windows)
@@ -62,23 +67,28 @@ jobs:
       if: matrix.os == 'windows-latest'
       shell: pwsh
       run: |
-        pyinstaller --name dyno --onedir --distpath ./dist dyno/dyno.py
+        pyinstaller --name dyno --onefile --distpath dyno/bin dyno/dyno.py
     
     - name: Handle executable
       timeout-minutes: 5
       shell: bash
       run: |
-        mkdir -p artifacts
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          cp dist/dyno/dyno.exe artifacts/dyno.exe
+          mv dyno/bin/dyno.exe dyno/bin/dyno-windows.exe
         else
-          cp dist/dyno/dyno artifacts/dyno
-          chmod +x artifacts/dyno
+          mv dyno/bin/dyno dyno/bin/dyno-mac
+          chmod +x dyno/bin/dyno-mac
         fi
     
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      timeout-minutes: 5
-      with:
-        name: dyno-${{ matrix.os }}
-        path: artifacts/${{ matrix.output_name }}
+    - name: Configure Git
+      run: |
+        git config --global user.name "GitHub Actions Bot"
+        git config --global user.email "actions@github.com"
+    
+    - name: Commit and push changes
+      run: |
+        git add dyno/bin/
+        git commit -m "Build executable for ${{ matrix.os }}" || echo "No changes to commit"
+        git push origin HEAD:${{ github.ref }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
