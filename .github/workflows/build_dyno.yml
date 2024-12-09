@@ -9,6 +9,7 @@ on:
     paths:
       - '.github/workflows/build_dyno.yml'  # Trigger on changes to this file
   workflow_dispatch:  # Keep manual trigger option
+
 jobs:
   build:
     timeout-minutes: 30
@@ -24,56 +25,60 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       timeout-minutes: 5
+    
     - name: Set up Python
       uses: actions/setup-python@v5
       timeout-minutes: 5
       with:
         python-version: '3.10'
+    
     - name: Install pyinstaller
       timeout-minutes: 10
       run: |
         pip install --timeout 600 -v --no-cache-dir pyinstaller~=6.11
+
     - name: Install pyserial
       timeout-minutes: 10
       run: |
         pip install --timeout 600 -v --no-cache-dir pyserial~=3.5
+
     - name: Install matplotlib
       timeout-minutes: 10
       run: |
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
-    - name: Build executable
+    
+    - name: Build executable (MacOS)
       timeout-minutes: 10
-      shell: bash  # Explicitly set shell to bash
+      shell: bash
       if: matrix.os == 'macos-latest'
       run: |
         pyinstaller --name dyno \
                     --onedir \
-                    --distpath dyno \
+                    --distpath ./dist \
                     dyno/dyno.py
+    
     - name: Build executable (Windows)
       timeout-minutes: 10
       if: matrix.os == 'windows-latest'
+      shell: pwsh
       run: |
-        pyinstaller --name dyno --onedir --distpath dyno dyno/dyno.py
+        pyinstaller --name dyno --onedir --distpath ./dist dyno/dyno.py
+    
     - name: Handle executable
       timeout-minutes: 5
       shell: bash
       run: |
-        mkdir -p dyno
+        mkdir -p artifacts
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          cp dyno/dyno/dyno.exe dyno/dyno.exe
+          cp dist/dyno/dyno.exe artifacts/dyno.exe
         else
-          cp dyno/dyno/dyno dyno/dyno
-          chmod +x dyno/dyno
+          cp dist/dyno/dyno artifacts/dyno
+          chmod +x artifacts/dyno
         fi
-    - name: Clean up build artifacts
-      timeout-minutes: 5
-      run: |
-        rm -rf dyno/dyno
-      shell: bash
+    
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       timeout-minutes: 5
       with:
         name: dyno-${{ matrix.os }}
-        path: dyno/${{ matrix.output_name }}
+        path: artifacts/${{ matrix.output_name }}
