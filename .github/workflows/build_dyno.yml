@@ -77,7 +77,7 @@ jobs:
         fi
     
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       timeout-minutes: 5
       with:
         name: dyno-${{ matrix.os }}
