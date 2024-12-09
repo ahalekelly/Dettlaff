@@ -1,4 +1,4 @@
-name: Build Executables
+name: Build Dyno Executables
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    timeout-minutes: 30  # Add job-level timeout
+    timeout-minutes: 30
 
     strategy:
       matrix:
@@ -24,34 +24,35 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      timeout-minutes: 5
 
     - name: Set up Python
       uses: actions/setup-python@v4
-      timeout-minutes: 5
       with:
         python-version: '3.12'
 
     - name: Install dependencies
-      timeout-minutes: 10
       run: |
         pip install --no-cache-dir pyserial~=3.5 pyinstaller~=6.11.0 --timeout 600 -v
 
     - name: Install matplotlib
-      timeout-minutes: 10
       run: |
         pip install --no-cache-dir matplotlib~=3.9.3 --timeout 600 -v
 
     - name: Build executable
-      timeout-minutes: 10
+      shell: bash  # Explicitly set shell to bash
+      if: matrix.os == 'macos-latest'
       run: |
         pyinstaller --name dyno \
                     --onedir \
                     --distpath dyno \
                     dyno/dyno.py
 
+    - name: Build executable (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        pyinstaller --name dyno --onedir --distpath dyno dyno/dyno.py
+
     - name: Handle executable
-      timeout-minutes: 5
       shell: bash
       run: |
         mkdir -p dyno
@@ -63,14 +64,12 @@ jobs:
         fi
 
     - name: Clean up build artifacts
-      timeout-minutes: 5
       run: |
         rm -rf dyno/dyno
       shell: bash
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
-      timeout-minutes: 5
       with:
         name: dyno-${{ matrix.os }}
         path: dyno/${{ matrix.output_name }}
