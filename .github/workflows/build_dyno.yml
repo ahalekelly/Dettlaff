@@ -10,8 +10,8 @@ on:
 jobs:
   build:
     timeout-minutes: 30  # Add job-level timeout
-        container:
-          options: --memory=4g
+    container:
+      options: --memory=4g
 
     strategy:
       matrix:
