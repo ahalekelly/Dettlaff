@@ -28,14 +28,9 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Install matplotlib
-      run: pip install matplotlib>=3.9.0
-
-    - name: Install pyserial
-      run: pip install pyserial>=3.5
-
-    - name: Install pyinstaller
-      run: pip install "pyinstaller>=6.11.0,<6.12.0"
+    - name: Install dependencies
+      run: |
+        pip install --no-cache-dir matplotlib==3.9.3 pyserial==3.5 pyinstaller==6.11.0
 
     - name: Build executable
       run: |
