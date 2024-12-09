@@ -1,20 +1,17 @@
 name: Build Executables
-
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
     paths:
-      - '.github/workflows/build_dyno.yml'
+      - '.github/workflows/build_dyno.yml'  # Trigger on changes to this file
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
     paths:
-      - '.github/workflows/build_dyno.yml'
-  workflow_dispatch:
-
+      - '.github/workflows/build_dyno.yml'  # Trigger on changes to this file
+  workflow_dispatch:  # Keep manual trigger option
 jobs:
   build:
     timeout-minutes: 30
-
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
@@ -23,46 +20,41 @@ jobs:
             output_name: dyno.exe
           - os: macos-latest
             output_name: dyno
-
     runs-on: ${{ matrix.os }}
-
     steps:
     - uses: actions/checkout@v4
       timeout-minutes: 5
-
     - name: Set up Python
       uses: actions/setup-python@v4
       timeout-minutes: 5
       with:
         python-version: '3.12'
-
-    - name: Install dependencies
+    - name: Install pyinstaller
       timeout-minutes: 10
       run: |
-        python -m pip install --upgrade pip
-        pip --timeout 600 install --no-cache-dir pyserial~=3.5 pyinstaller~=6.11.0 -v
-
+        pip --timeout 600 install --no-cache-dir pyinstaller~=6.11.0 -v
+    - name: Install pyserial
+      timeout-minutes: 10
+      run: |
+        pip --timeout 600 install --no-cache-dir pyserial~=3.5 -v
     - name: Install matplotlib
       timeout-minutes: 10
       run: |
         pip --timeout 600 install --no-cache-dir matplotlib~=3.9.3 -v
-
     - name: Build executable
       timeout-minutes: 10
-      shell: bash
+      shell: bash  # Explicitly set shell to bash
       if: matrix.os == 'macos-latest'
       run: |
         pyinstaller --name dyno \
                     --onedir \
                     --distpath dyno \
                     dyno/dyno.py
-
     - name: Build executable (Windows)
       timeout-minutes: 10
       if: matrix.os == 'windows-latest'
       run: |
         pyinstaller --name dyno --onedir --distpath dyno dyno/dyno.py
-
     - name: Handle executable
       timeout-minutes: 5
       shell: bash
@@ -74,13 +66,11 @@ jobs:
           cp dyno/dyno/dyno dyno/dyno
           chmod +x dyno/dyno
         fi
-
     - name: Clean up build artifacts
       timeout-minutes: 5
       run: |
         rm -rf dyno/dyno
       shell: bash
-
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       timeout-minutes: 5
