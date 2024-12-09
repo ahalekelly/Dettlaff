@@ -32,15 +32,15 @@ jobs:
     - name: Install pyinstaller
       timeout-minutes: 10
       run: |
-        pip --timeout 600 install --no-cache-dir pyinstaller~=6.11.0 -v
+        pip install --timeout 600 -v --no-cache-dir pyinstaller~=6.11
     - name: Install pyserial
       timeout-minutes: 10
       run: |
-        pip --timeout 600 install --no-cache-dir pyserial~=3.5 -v
+        pip install --timeout 600 -v --no-cache-dir pyserial~=3.5
     - name: Install matplotlib
       timeout-minutes: 10
       run: |
-        pip --timeout 600 install --no-cache-dir matplotlib~=3.9.3 -v
+        pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
     - name: Build executable
       timeout-minutes: 10
       shell: bash  # Explicitly set shell to bash
