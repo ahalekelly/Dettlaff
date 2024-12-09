@@ -1,6 +1,7 @@
 name: Build Executables
 
 on:
+  push:
     branches: [ master ]
     paths:
       - '.github/workflows/build_dyno.yml'  # Trigger on changes to this file
