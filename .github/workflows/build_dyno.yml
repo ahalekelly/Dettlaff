@@ -3,9 +3,13 @@ name: Build Executables
 on:
   push:
     branches: [ main ]
+    paths:
+      - '.github/workflows/build_dyno.yml'  # Trigger on changes to this file
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
+    paths:
+      - '.github/workflows/build_dyno.yml'  # Trigger on changes to this file
+  workflow_dispatch:  # Keep manual trigger option
 
 jobs:
   build:
@@ -35,12 +39,12 @@ jobs:
     - name: Install dependencies
       timeout-minutes: 10
       run: |
-        pip install --no-cache-dir pyserial~=3.5 pyinstaller~=6.11.0 --timeout 600 -v --progress-bar off
+        pip install --no-cache-dir pyserial~=3.5 pyinstaller~=6.11.0 --timeout 600 -v
 
     - name: Install matplotlib
       timeout-minutes: 10
       run: |
-        pip install --no-cache-dir matplotlib~=3.9.3 --timeout 600 -v --progress-bar off
+        pip install --no-cache-dir matplotlib~=3.9.3 --timeout 600 -v
 
     - name: Build executable
       timeout-minutes: 10
