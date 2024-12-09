@@ -42,7 +42,8 @@ jobs:
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
     
     - name: Ensure bin directory exists
-      run: mkdir -p dyno/bin
+      shell: pwsh
+      run: New-Item -Path dyno/bin -ItemType Directory -Force
 
     - name: Build executable
       timeout-minutes: 10
@@ -97,7 +98,7 @@ jobs:
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
     
     - name: Ensure bin directory exists
-      run: mkdir -p dyno/bin
+      run: mkdir -p dyno/bin 2>/dev/null || true
 
     - name: Build executable
       timeout-minutes: 10
