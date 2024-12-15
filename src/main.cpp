@@ -558,7 +558,7 @@ void loop()
 
         // Telemetry logging for use with dyno python script
         if (telemetryInterval_ms > 0 && time_ms % telemetryInterval_ms == 0 && dshotBidirectional == ENABLE_BIDIRECTION && lastRevTime_ms != 0) {
-            if (loopStartTimer_us / 1000 - lastRevTime_ms < 100) {
+            if (time_ms - lastRevTime_ms < 100 || time_ms - triggerTime_ms < 250) {
                 Serial.print((loopStartTimer_us - revStartTime_us) / 1000); // time since trigger pull
                 // Serial.print(loopStartTimer_us / 1000); // time since boot
                 Serial.print(",");
