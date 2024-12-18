@@ -24,17 +24,45 @@ jobs:
     - name: Install dependencies
       timeout-minutes: 10
       run: |
-        pip install --timeout 600 -v --no-cache-dir nuitka
+        pip install --timeout 600 -v --no-cache-dir pyoxidizer
         pip install --timeout 600 -v --no-cache-dir pyserial~=3.5
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
+    
+    - name: Create PyOxidizer config
+      shell: pwsh
+      run: |
+        @"
+        def make_exe():
+            dist = default_python_distribution()
+            policy = dist.make_python_packaging_policy()
+            policy.resources_location = "in-memory"
+            policy.resources_location_fallback = "filesystem-relative:lib"
+            
+            python_config = dist.make_python_interpreter_config()
+            python_config.run_module = "dyno.dyno"
+            
+            exe = dist.to_python_executable(
+                name = "dyno",
+                packaging_policy = policy,
+                config = python_config,
+            )
+            
+            exe.add_python_resources(exe.pip_install(["pyserial==3.5", "matplotlib==3.9.3"]))
+            exe.add_python_resources(exe.read_package_root(".", ["dyno"]))
+            
+            return exe
+
+        register_target("exe", make_exe)
+        resolve_targets()
+        "@ | Out-File -FilePath pyoxidizer.bzl -Encoding UTF8
     
     - name: Build executable
       timeout-minutes: 10
       shell: pwsh
       run: |
-        python -m nuitka --standalone --onefile --follow-imports dyno/dyno.py --output-filename=dyno-windows.exe
+        pyoxidizer build --release
         New-Item -Path dist -ItemType Directory -Force
-        Move-Item dyno-windows.exe dist/
+        Move-Item build/*/release/install/dyno.exe dist/dyno-windows.exe
     
     - name: Upload Windows build
       uses: actions/upload-artifact@v4
@@ -59,17 +87,44 @@ jobs:
     - name: Install dependencies
       timeout-minutes: 10
       run: |
-        pip install --timeout 600 -v --no-cache-dir nuitka
+        pip install --timeout 600 -v --no-cache-dir pyoxidizer
         pip install --timeout 600 -v --no-cache-dir pyserial~=3.5
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
+    
+    - name: Create PyOxidizer config
+      run: |
+        cat > pyoxidizer.bzl << 'EOL'
+        def make_exe():
+            dist = default_python_distribution()
+            policy = dist.make_python_packaging_policy()
+            policy.resources_location = "in-memory"
+            policy.resources_location_fallback = "filesystem-relative:lib"
+            
+            python_config = dist.make_python_interpreter_config()
+            python_config.run_module = "dyno.dyno"
+            
+            exe = dist.to_python_executable(
+                name = "dyno",
+                packaging_policy = policy,
+                config = python_config,
+            )
+            
+            exe.add_python_resources(exe.pip_install(["pyserial==3.5", "matplotlib==3.9.3"]))
+            exe.add_python_resources(exe.read_package_root(".", ["dyno"]))
+            
+            return exe
+
+        register_target("exe", make_exe)
+        resolve_targets()
+        EOL
     
     - name: Build executable
       timeout-minutes: 10
       shell: bash
       run: |
-        python -m nuitka --standalone --onefile --follow-imports dyno/dyno.py --output-filename=dyno-mac
+        pyoxidizer build --release
         mkdir -p dist
-        mv dyno-mac dist/
+        mv build/*/release/install/dyno dist/dyno-mac
         chmod +x dist/dyno-mac
         cd dist && zip dyno-mac.zip dyno-mac
     
