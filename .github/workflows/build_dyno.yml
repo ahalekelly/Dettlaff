@@ -9,13 +9,13 @@ on:
 
 jobs:
   build-windows:
+    # Windows job stays exactly the same...
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@v4
       timeout-minutes: 5
     
-    # Rest of the windows job remains exactly the same...
     - name: Set up Python
       uses: actions/setup-python@v5
       timeout-minutes: 5
@@ -70,7 +70,6 @@ jobs:
     - uses: actions/checkout@v4
       timeout-minutes: 5
     
-    # Rest of the macos job remains exactly the same...
     - name: Set up Python
       uses: actions/setup-python@v5
       timeout-minutes: 5
@@ -110,17 +109,18 @@ jobs:
         mkdir -p dist
         mv build/exe.macos*/dyno dist/dyno-mac
         chmod +x dist/dyno-mac
+        cd dist && zip dyno-mac.zip dyno-mac
     
     - name: Upload macOS build
       uses: actions/upload-artifact@v4
       with:
         name: macos-build
-        path: dist/dyno-mac
+        path: dist/dyno-mac.zip
         retention-days: 1
 
   create-release:
     needs: [build-windows, build-macos]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
@@ -138,14 +138,25 @@ jobs:
           # Get the date and short SHA
           DATE=$(date +'%Y-%m-%d')
           SHA=$(git rev-parse --short HEAD)
-          RELEASE_TAG="dyno-${DATE}-${SHA}"
+          RELEASE_TAG="build-${DATE}-${SHA}"
           
-          # Get the commit message for release notes
-          COMMIT_MSG=$(git log -1 --pretty=%B)
+          # Create release notes with Mac instructions
+          cat > release_notes.md << 'EOL'
+          Automated build from commit: $(git log -1 --pretty=%B)
+
+          ## Mac Installation Instructions
+          1. Download dyno-mac.zip
+          2. Double-click to extract
+          3. Open Terminal
+          4. Navigate to the extracted folder: cd ~/Downloads/dyno-mac
+          5. Run the program: ./dyno-mac
+
+          Note: If you get a security warning, go to System Preferences > Security & Privacy and click "Open Anyway"
+          EOL
           
           # Create release
           gh release create "$RELEASE_TAG" \
-            --title "Dyno Build ${DATE} (${SHA})" \
-            --notes "Automated build from commit: ${COMMIT_MSG}" \
+            --title "Build ${DATE} (${SHA})" \
+            --notes-file release_notes.md \
             dist/windows-build/dyno-windows.exe \
-            dist/macos-build/dyno-mac
+            dist/macos-build/dyno-mac.zip
