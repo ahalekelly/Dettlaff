@@ -27,7 +27,7 @@ jobs:
         pip install --timeout 600 -v --no-cache-dir pyoxidizer
         pip install --timeout 600 -v --no-cache-dir pyserial~=3.5
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
-    
+
     - name: Create PyOxidizer config
       shell: pwsh
       run: |
@@ -35,11 +35,17 @@ jobs:
         def make_exe():
             dist = default_python_distribution()
             policy = dist.make_python_packaging_policy()
-            policy.resources_location = "in-memory"
+            policy.resources_location = "filesystem-relative:lib"
             policy.resources_location_fallback = "filesystem-relative:lib"
+            policy.allow_files = True
+            policy.file_scanner_emit_files = True
+            policy.include_distribution_resources = True
+            policy.include_non_distribution_sources = True
+            policy.include_test = False
             
             python_config = dist.make_python_interpreter_config()
             python_config.run_module = "dyno.dyno"
+            python_config.module_search_paths = ["$ORIGIN", "$ORIGIN/lib"]
             
             exe = dist.to_python_executable(
                 name = "dyno",
@@ -50,7 +56,14 @@ jobs:
             exe.add_python_resources(exe.pip_install(["pyserial==3.5", "matplotlib==3.9.3"]))
             exe.add_python_resources(exe.read_package_root(".", ["dyno"]))
             
+            # Tell PyOxidizer about module files that should be copied into the bundle
+            exe.add_in_memory_python_resources(dist.pip_install(["numpy"]))
+            
             return exe
+
+        # Tell PyOxidizer we want to build a single-file binary.
+        def make_embedded():
+            return VARS.get("PYOXIDIZER_EXE")
 
         register_target("exe", make_exe)
         resolve_targets()
@@ -97,11 +110,17 @@ jobs:
         def make_exe():
             dist = default_python_distribution()
             policy = dist.make_python_packaging_policy()
-            policy.resources_location = "in-memory"
+            policy.resources_location = "filesystem-relative:lib"
             policy.resources_location_fallback = "filesystem-relative:lib"
+            policy.allow_files = True
+            policy.file_scanner_emit_files = True
+            policy.include_distribution_resources = True
+            policy.include_non_distribution_sources = True
+            policy.include_test = False
             
             python_config = dist.make_python_interpreter_config()
             python_config.run_module = "dyno.dyno"
+            python_config.module_search_paths = ["$ORIGIN", "$ORIGIN/lib"]
             
             exe = dist.to_python_executable(
                 name = "dyno",
@@ -112,7 +131,14 @@ jobs:
             exe.add_python_resources(exe.pip_install(["pyserial==3.5", "matplotlib==3.9.3"]))
             exe.add_python_resources(exe.read_package_root(".", ["dyno"]))
             
+            # Tell PyOxidizer about module files that should be copied into the bundle
+            exe.add_in_memory_python_resources(dist.pip_install(["numpy"]))
+            
             return exe
+
+        # Tell PyOxidizer we want to build a single-file binary.
+        def make_embedded():
+            return VARS.get("PYOXIDIZER_EXE")
 
         register_target("exe", make_exe)
         resolve_targets()
@@ -124,15 +150,17 @@ jobs:
       run: |
         pyoxidizer build --release
         mkdir -p dist
-        mv ./build/aarch64-apple-darwin/release/exe/dyno dist/dyno-mac
-        chmod +x dist/dyno-mac
-        cd dist && zip dyno-mac.zip dyno-mac
+        # Copy the entire build directory to preserve dependencies
+        mv ./build/aarch64-apple-darwin/release/exe/* dist/
+        cd dist
+        # Create archive with all files
+        tar czf dyno-mac.tgz *
     
     - name: Upload macOS build
       uses: actions/upload-artifact@v4
       with:
         name: macos-build
-        path: dist/dyno-mac.zip
+        path: dist/dyno-mac.tgz
         retention-days: 1
 
   create-release:
@@ -162,11 +190,11 @@ jobs:
           Automated build from commit: $(git log -1 --pretty=%B)
 
           ## Mac Installation Instructions
-          1. Download dyno-mac.zip
-          2. Double-click to extract
-          3. Open Terminal
-          4. Navigate to Downloads: cd ~/Downloads
-          5. Run the program: ./dyno-mac
+          1. Download dyno-mac.tgz
+          2. Open Terminal
+          3. Navigate to Downloads: cd ~/Downloads
+          4. Extract the archive: tar xzf dyno-mac.tgz
+          5. Run the program: ./dyno
 
           Note: If you get a security warning, go to System Preferences > Security & Privacy and click "Open Anyway"
           EOL
@@ -176,4 +204,4 @@ jobs:
             --title "Dyno Build ${DATE} (${SHA})" \
             --notes-file release_notes.md \
             dist/windows-build/dyno-windows.exe \
-            dist/macos-build/dyno-mac.zip
+            dist/macos-build/dyno-mac.tgz
