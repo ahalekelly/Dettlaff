@@ -44,7 +44,7 @@ class DynamometerPlotter:
         self.lines = []
         self.data = deque(maxlen=MAX_DATA_POINTS)
         self.new_run = True
-        self.mask_starts = []  # Initialize mask_starts here
+        self.mask_starts = []
         self.data_lock = Lock()
         self.min_max_text = None
         self.start_time = None
@@ -56,7 +56,6 @@ class DynamometerPlotter:
         self.max_rpms = [float('-inf')] * self.num_motors
         self.max_rpm_overall = 0  # Track the overall maximum RPM
         self.line_width = LINE_WIDTH  # Add this line
-        self.mask_starts = []  # Initialize mask_starts here  # Initialize mask_starts here
         self.buffer = []  # Add this line to store data between updates
         self.update_flag = False  # Add this line to control when to update the plot
 
@@ -75,7 +74,6 @@ class DynamometerPlotter:
             self.running = True
             self.data_thread = Thread(target=self.read_serial_data)
             self.data_thread.start()
-        self.mask_starts = []
 
     def determine_num_motors(self):
         if self.log_file:
@@ -295,15 +293,13 @@ class DynamometerPlotter:
         plt.savefig(self.png_file, dpi=300, bbox_inches='tight')
 
     def run(self):
+        print("Starting plotting" + (" for log file data" if self.log_file else " in real-time"))
         if self.log_file:
-            print("Displaying plot for log file data")
-            self.update_plot(0)  # Ensure plot is updated once for log files
+            self.update_plot(0)  # Initial plot for log files
             plt.show()
         else:
-            print("Starting real-time plotting")
-            # Change interval from 100ms to 1000ms (1 second)
             ani = FuncAnimation(self.fig, self.update_plot, interval=1000, cache_frame_data=False)
-            plt.show()  # This will block until the window is closed
+            plt.show()
         
         self.running = False
         if hasattr(self, 'data_thread'):
