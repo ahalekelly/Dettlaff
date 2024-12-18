@@ -24,36 +24,17 @@ jobs:
     - name: Install dependencies
       timeout-minutes: 10
       run: |
-        pip install --timeout 600 -v --no-cache-dir cx_Freeze~=6.15.9
+        pip install --timeout 600 -v --no-cache-dir nuitka
         pip install --timeout 600 -v --no-cache-dir pyserial~=3.5
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
     
-    - name: Create setup.py
-      shell: pwsh
-      run: |
-        @"
-        from cx_Freeze import setup, Executable
-        
-        setup(
-            name="dyno",
-            version="1.0",
-            executables=[
-                Executable(
-                    "dyno/dyno.py",
-                    target_name="dyno.exe",
-                    base="console"
-                )
-            ]
-        )
-        "@ | Out-File -FilePath setup.py -Encoding UTF8
-
     - name: Build executable
       timeout-minutes: 10
       shell: pwsh
       run: |
-        python setup.py build
+        python -m nuitka --standalone --onefile --follow-imports dyno/dyno.py --output-filename=dyno-windows.exe
         New-Item -Path dist -ItemType Directory -Force
-        Move-Item build/exe.win*/dyno.exe dist/dyno-windows.exe
+        Move-Item dyno-windows.exe dist/
     
     - name: Upload Windows build
       uses: actions/upload-artifact@v4
@@ -78,50 +59,17 @@ jobs:
     - name: Install dependencies
       timeout-minutes: 10
       run: |
-        pip install --timeout 600 -v --no-cache-dir cx_Freeze~=6.15.9
+        pip install --timeout 600 -v --no-cache-dir nuitka
         pip install --timeout 600 -v --no-cache-dir pyserial~=3.5
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
     
-    - name: Create setup.py
-      run: |
-        cat > setup.py << 'EOL'
-        from cx_Freeze import setup, Executable
-        from cx_Freeze.hooks import get_qt_plugins_paths
-        import sys
-
-        build_exe_options = {
-            "packages": ["matplotlib", "serial", "numpy"],
-            "excludes": ["tkinter", "test", "distutils"],
-            "include_files": [],
-            "optimize": 2,
-            "build_exe": "build/dyno",
-            "zip_include_packages": "*",
-            "zip_exclude_packages": "",
-        }
-
-        setup(
-            name="dyno",
-            version="1.0",
-            options={
-                "build_exe": build_exe_options,
-            },
-            executables=[
-                Executable(
-                    "dyno/dyno.py",
-                    target_name="dyno",
-                    base="console"
-                )
-            ]
-        )
-        EOL
-
     - name: Build executable
       timeout-minutes: 10
       shell: bash
       run: |
-        python setup.py build
+        python -m nuitka --standalone --onefile --follow-imports dyno/dyno.py --output-filename=dyno-mac
         mkdir -p dist
-        mv build/dyno/dyno dist/dyno-mac
+        mv dyno-mac dist/
         chmod +x dist/dyno-mac
         cd dist && zip dyno-mac.zip dyno-mac
     
@@ -163,8 +111,7 @@ jobs:
           2. Double-click to extract
           3. Open Terminal
           4. Navigate to Downloads: cd ~/Downloads
-          5. Make executable: chmod +x dyno-mac
-          6. Run the program: ./dyno-mac
+          5. Run the program: ./dyno-mac
 
           Note: If you get a security warning, go to System Preferences > Security & Privacy and click "Open Anyway"
           EOL
