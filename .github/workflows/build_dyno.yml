@@ -26,10 +26,10 @@ jobs:
       with:
         python-version: '3.10'
     
-    - name: Install pyinstaller
+    - name: Install cx_Freeze
       timeout-minutes: 10
       run: |
-        pip install --timeout 600 -v --no-cache-dir pyinstaller==6.10.0
+        pip install --timeout 600 -v --no-cache-dir cx_Freeze~=6.15.9
 
     - name: Install pyserial
       timeout-minutes: 10
@@ -41,21 +41,32 @@ jobs:
       run: |
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
     
-    - name: Ensure bin directory exists
+    - name: Create setup.py
       shell: pwsh
-      run: New-Item -Path dyno/bin -ItemType Directory -Force
+      run: |
+        @"
+        from cx_Freeze import setup, Executable
+        
+        setup(
+            name="dyno",
+            version="1.0",
+            executables=[
+                Executable(
+                    "dyno/dyno.py",
+                    target_name="dyno.exe",
+                    base="console"
+                )
+            ]
+        )
+        "@ | Out-File -FilePath setup.py -Encoding UTF8
 
     - name: Build executable
       timeout-minutes: 10
       shell: pwsh
       run: |
-        pyinstaller --name dyno --onefile --distpath dyno/bin dyno/dyno.py
-    
-    - name: Handle executable
-      timeout-minutes: 5
-      shell: bash
-      run: |
-        mv dyno/bin/dyno.exe dyno/bin/dyno-windows.exe
+        python setup.py build
+        New-Item -Path dyno/bin -ItemType Directory -Force
+        Move-Item build/exe.win*/dyno.exe dyno/bin/dyno-windows.exe
     
     - name: Configure Git and Push
       run: |
@@ -82,10 +93,10 @@ jobs:
       with:
         python-version: '3.10'
     
-    - name: Install pyinstaller
+    - name: Install cx_Freeze
       timeout-minutes: 10
       run: |
-        pip install --timeout 600 -v --no-cache-dir pyinstaller~=6.11
+        pip install --timeout 600 -v --no-cache-dir cx_Freeze~=6.15.9
 
     - name: Install pyserial
       timeout-minutes: 10
@@ -97,23 +108,31 @@ jobs:
       run: |
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
     
-    - name: Ensure bin directory exists
-      run: mkdir -p dyno/bin 2>/dev/null || true
+    - name: Create setup.py
+      run: |
+        cat > setup.py << 'EOL'
+        from cx_Freeze import setup, Executable
+        
+        setup(
+            name="dyno",
+            version="1.0",
+            executables=[
+                Executable(
+                    "dyno/dyno.py",
+                    target_name="dyno",
+                    base="console"
+                )
+            ]
+        )
+        EOL
 
     - name: Build executable
       timeout-minutes: 10
       shell: bash
       run: |
-        pyinstaller --name dyno \
-                    --onefile \
-                    --distpath dyno/bin \
-                    dyno/dyno.py
-    
-    - name: Handle executable
-      timeout-minutes: 5
-      shell: bash
-      run: |
-        mv dyno/bin/dyno dyno/bin/dyno-mac
+        python setup.py build
+        mkdir -p dyno/bin
+        mv build/exe.macos*/dyno dyno/bin/dyno-mac
         chmod +x dyno/bin/dyno-mac
     
     - name: Configure Git and Push
