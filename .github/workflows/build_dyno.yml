@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-windows:
-    # Windows job stays exactly the same...
+    # Windows job stays the same...
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -107,9 +107,10 @@ jobs:
       run: |
         python setup.py build
         mkdir -p dist
-        mv build/exe.macos*/dyno dist/dyno-mac
-        chmod +x dist/dyno-mac
-        cd dist && zip dyno-mac.zip dyno-mac
+        # Move the entire build directory and rename it
+        mv build/exe.macos* dist/dyno-mac
+        chmod +x dist/dyno-mac/dyno
+        cd dist && zip -r dyno-mac.zip dyno-mac
     
     - name: Upload macOS build
       uses: actions/upload-artifact@v4
@@ -137,7 +138,7 @@ jobs:
         run: |
           # Get the date and short SHA
           DATE=$(date +'%Y-%m-%d')
-          SHA=$(git rev-parse --short HEAD)
+          SHA=$(git rev-parse --short SHA)
           RELEASE_TAG="build-${DATE}-${SHA}"
           
           # Create release notes with Mac instructions
@@ -149,7 +150,7 @@ jobs:
           2. Double-click to extract
           3. Open Terminal
           4. Navigate to the extracted folder: cd ~/Downloads/dyno-mac
-          5. Run the program: ./dyno-mac
+          5. Run the program: ./dyno
 
           Note: If you get a security warning, go to System Preferences > Security & Privacy and click "Open Anyway"
           EOL
