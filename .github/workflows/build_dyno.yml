@@ -1,15 +1,9 @@
-name: Build Dyno Executables
+name: Build and Release Dyno Executables
 on:
   push:
     branches: [ master ]
     paths:
       - 'dyno/dyno.py'
-      - '.github/workflows/build_dyno.yml'
-  pull_request:
-    branches: [ master ]
-    paths:
-      - 'dyno/dyno.py'
-      - '.github/workflows/build_dyno.yml'
   workflow_dispatch:
 
 jobs:
@@ -26,19 +20,11 @@ jobs:
       with:
         python-version: '3.10'
     
-    - name: Install cx_Freeze
+    - name: Install dependencies
       timeout-minutes: 10
       run: |
         pip install --timeout 600 -v --no-cache-dir cx_Freeze~=6.15.9
-
-    - name: Install pyserial
-      timeout-minutes: 10
-      run: |
         pip install --timeout 600 -v --no-cache-dir pyserial~=3.5
-
-    - name: Install matplotlib
-      timeout-minutes: 10
-      run: |
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
     
     - name: Create setup.py
@@ -65,22 +51,17 @@ jobs:
       shell: pwsh
       run: |
         python setup.py build
-        New-Item -Path dyno/bin -ItemType Directory -Force
-        Move-Item build/exe.win*/dyno.exe dyno/bin/dyno-windows.exe
+        New-Item -Path dist -ItemType Directory -Force
+        Move-Item build/exe.win*/dyno.exe dist/dyno-windows.exe
     
-    - name: Configure Git and Push
-      run: |
-        git config --global user.name "GitHub Actions Bot"
-        git config --global user.email "actions@github.com"
-        git pull origin master
-        git add dyno/bin/
-        git commit -m "Build Windows executable" || echo "No changes to commit"
-        git push origin HEAD:${{ github.ref }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload Windows build
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-build
+        path: dist/dyno-windows.exe
+        retention-days: 1
 
   build-macos:
-    needs: build-windows
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
@@ -93,19 +74,11 @@ jobs:
       with:
         python-version: '3.10'
     
-    - name: Install cx_Freeze
+    - name: Install dependencies
       timeout-minutes: 10
       run: |
         pip install --timeout 600 -v --no-cache-dir cx_Freeze~=6.15.9
-
-    - name: Install pyserial
-      timeout-minutes: 10
-      run: |
         pip install --timeout 600 -v --no-cache-dir pyserial~=3.5
-
-    - name: Install matplotlib
-      timeout-minutes: 10
-      run: |
         pip install --timeout 600 -v --no-cache-dir matplotlib~=3.9.3
     
     - name: Create setup.py
@@ -131,17 +104,45 @@ jobs:
       shell: bash
       run: |
         python setup.py build
-        mkdir -p dyno/bin
-        mv build/exe.macos*/dyno dyno/bin/dyno-mac
-        chmod +x dyno/bin/dyno-mac
+        mkdir -p dist
+        mv build/exe.macos*/dyno dist/dyno-mac
+        chmod +x dist/dyno-mac
     
-    - name: Configure Git and Push
-      run: |
-        git config --global user.name "GitHub Actions Bot"
-        git config --global user.email "actions@github.com"
-        git pull origin master
-        git add dyno/bin/
-        git commit -m "Build macOS executable" || echo "No changes to commit"
-        git push origin HEAD:${{ github.ref }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload macOS build
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-build
+        path: dist/dyno-mac
+        retention-days: 1
+
+  create-release:
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the date and short SHA
+          DATE=$(date +'%Y-%m-%d')
+          SHA=$(git rev-parse --short HEAD)
+          RELEASE_TAG="build-${DATE}-${SHA}"
+          
+          # Get the commit message for release notes
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          
+          # Create release
+          gh release create "$RELEASE_TAG" \
+            --title "Build ${DATE} (${SHA})" \
+            --notes "Automated build from commit: ${COMMIT_MSG}" \
+            dist/windows-build/dyno-windows.exe \
+            dist/macos-build/dyno-mac
