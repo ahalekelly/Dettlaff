@@ -62,7 +62,7 @@ jobs:
       run: |
         pyoxidizer build --release
         New-Item -Path dist -ItemType Directory -Force
-        Move-Item build/*/release/install/dyno.exe dist/dyno-windows.exe
+        Move-Item build/x86_64-pc-windows-msvc/release/exe/dyno.exe dist/dyno-windows.exe
     
     - name: Upload Windows build
       uses: actions/upload-artifact@v4
@@ -124,7 +124,7 @@ jobs:
       run: |
         pyoxidizer build --release
         mkdir -p dist
-        mv build/*/release/install/dyno dist/dyno-mac
+        mv ./build/aarch64-apple-darwin/release/exe/dyno dist/dyno-mac
         chmod +x dist/dyno-mac
         cd dist && zip dyno-mac.zip dyno-mac
     
