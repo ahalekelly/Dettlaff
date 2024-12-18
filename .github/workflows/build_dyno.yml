@@ -123,13 +123,13 @@ jobs:
         mkdir -p dist
         mv build/dyno/dyno dist/dyno-mac
         chmod +x dist/dyno-mac
-        # No need to zip since it's a single file
+        cd dist && zip dyno-mac.zip dyno-mac
     
     - name: Upload macOS build
       uses: actions/upload-artifact@v4
       with:
         name: macos-build
-        path: dist/dyno-mac
+        path: dist/dyno-mac.zip
         retention-days: 1
 
   create-release:
@@ -159,11 +159,12 @@ jobs:
           Automated build from commit: $(git log -1 --pretty=%B)
 
           ## Mac Installation Instructions
-          1. Download dyno-mac
-          2. Open Terminal
-          3. Navigate to Downloads: cd ~/Downloads
-          4. Make executable: chmod +x dyno-mac
-          5. Run the program: ./dyno-mac
+          1. Download dyno-mac.zip
+          2. Double-click to extract
+          3. Open Terminal
+          4. Navigate to Downloads: cd ~/Downloads
+          5. Make executable: chmod +x dyno-mac
+          6. Run the program: ./dyno-mac
 
           Note: If you get a security warning, go to System Preferences > Security & Privacy and click "Open Anyway"
           EOL
@@ -173,4 +174,4 @@ jobs:
             --title "Dyno Build ${DATE} (${SHA})" \
             --notes-file release_notes.md \
             dist/windows-build/dyno-windows.exe \
-            dist/macos-build/dyno-mac
+            dist/macos-build/dyno-mac.zip
