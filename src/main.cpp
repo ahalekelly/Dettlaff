@@ -320,6 +320,10 @@ void loop()
                 flywheelState = STATE_FULLSPEED;
                 fromIdle =  true;
                 Serial.println("STATE_FULLSPEED transition 1");
+            } else if (loopStartTimer_us - revStartTime_us > 2000000) {
+                flywheelState = STATE_IDLE;
+                shotsToFire = 0;
+                Serial.println("Error! Flywheels failed to reach target speed!");
             }
         }
         if ((flywheelControl == OPEN_LOOP_CONTROL
