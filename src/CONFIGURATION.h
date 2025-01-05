@@ -76,7 +76,7 @@ boards_t board = board_v0_9; // select the one that matches your board revision
 
 // Pusher Settings
 pusherType_t pusherType = PUSHER_MOTOR_CLOSEDLOOP; // either PUSHER_MOTOR_CLOSEDLOOP or PUSHER_SOLENOID_OPENLOOP
-uint32_t pusherVoltage_mv = 16000; // if battery voltage is above this voltage, then use PWM to reduce the voltage that the pusher sees
+uint32_t pusherVoltage_mv = 13000; // if battery voltage is above this voltage, then use PWM to reduce the voltage that the pusher sees
 bool pusherReverseDirection = false; // make motor spin backwards? v0.5 & v0.6 (hBridgeDriver) need this to be false or the pusher logic is inverted? and the v0.2 - v0.4 at8870 pusher seems to need this to be true for reverse polarity braking to work?
 
 // Solenoid Settings
