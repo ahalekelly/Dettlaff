@@ -271,7 +271,7 @@ void loop()
     switch (flywheelState) {
 
     case STATE_IDLE:
-        if (batteryVoltage_mv < lowVoltageCutoff_mv && throttleValue[0] == 0 && loopStartTimer_us > 2000000) {
+        if (batteryVoltage_mv < lowVoltageCutoff_mv && throttleValue[0] == 0 && time_ms > 2000) {
             digitalWrite(board.flywheel, LOW); // cut power to ESCs and pusher
             Serial.print("Battery low, shutting down! ");
             Serial.print(batteryVoltage_mv);
